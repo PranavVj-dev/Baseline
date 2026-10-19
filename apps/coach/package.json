@@ -1,0 +1,8 @@
+{
+  "name": "@baseline/coach",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": { "dev": "vite", "build": "vite build" },
+  "dependencies": { "@baseline/shared": "*", "@baseline/ui": "*", "react": "18.3.1", "react-dom": "18.3.1" }
+}

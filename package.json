@@ -1,19 +1,18 @@
 {
-  "name": "baseline-prototype",
+  "name": "baseline",
   "private": true,
-  "version": "0.1.0",
-  "type": "module",
+  "version": "0.2.0",
+  "workspaces": ["server", "packages/*", "apps/*"],
+  "engines": { "node": ">=22.13" },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "dev": "concurrently -n server,coach,trainer -c blue,green,magenta \"npm run dev -w server\" \"npm run dev -w apps/coach\" \"npm run dev -w apps/trainer\"",
+    "server": "npm run dev -w server",
+    "coach": "npm run dev -w apps/coach",
+    "trainer": "npm run dev -w apps/trainer"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",
+    "concurrently": "9.1.0",
     "vite": "5.4.11"
   }
 }

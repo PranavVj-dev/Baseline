@@ -1,0 +1,65 @@
+:root {
+  --ink: #0f2a43; --ink-2: #1d3d5c; --led: #ffb020;
+  --paper: #f3f5f7; --card: #fff; --line: #d5dce3;
+  --text: #16212c; --muted: #5b6b7a;
+  --ok: #1f7a4d; --bad: #b3402f; --focus: #1b6fd1; --r: 12px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text); background: var(--paper);
+}
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; margin: 0; }
+h1, h2, h3 { margin: 0; }
+.muted { color: var(--muted); }
+.center { display: grid; place-items: center; min-height: 100vh; }
+
+/* Buttons feel like keys: raised edge that sinks on press, plus a ring pulse on every tap. */
+button { font: inherit; color: inherit; cursor: pointer; min-height: 44px; padding: 0 14px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 3px 0 var(--line); transition: transform .06s, box-shadow .06s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 var(--line); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+button:disabled { opacity: .45; cursor: default; box-shadow: none; }
+button.tap { animation: tap .28s ease-out; }
+@keyframes tap { 0% { box-shadow: 0 0 0 0 rgba(27,111,209,.55); } 100% { box-shadow: 0 0 0 12px rgba(27,111,209,0); } }
+.btn-primary { background: var(--ink); border-color: var(--ink); box-shadow: 0 3px 0 #06131f; color: #fff; font-weight: 600; }
+.btn-quiet { background: transparent; border-color: transparent; box-shadow: none; color: var(--muted); }
+
+.field { display: grid; gap: 6px; font-weight: 600; font-size: .9rem; }
+.field input { font: inherit; font-weight: 400; min-height: 46px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.error { margin: 0; padding: 10px 12px; border-radius: 10px; background: #fbe9e6; color: var(--bad); font-size: .9rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; }
+
+/* Sign in / create account */
+.auth { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+.auth-brand { background: var(--ink); color: #fff; padding: 48px; display: flex; flex-direction: column; justify-content: center; gap: 14px; }
+.auth-brand h1 { font-size: 2.4rem; }
+.auth-brand h1::after { content: ""; display: block; width: 56px; height: 5px; margin-top: 14px; background: var(--led); border-radius: 3px; }
+.auth-brand p { margin: 0; max-width: 32ch; color: #b9c9d9; font-size: 1.1rem; }
+.auth-card { align-self: center; justify-self: center; width: min(420px, 100%); display: grid; gap: 14px; padding: 32px 24px; }
+.choices { display: grid; gap: 8px; margin: 0; padding: 0; border: 0; }
+.choices legend { font-weight: 600; font-size: .9rem; margin-bottom: 8px; padding: 0; }
+.choice { display: grid; gap: 2px; text-align: left; padding: 10px 14px; min-height: 0; }
+.choice span { color: var(--muted); font-size: .85rem; }
+.choice[aria-pressed="true"] { border: 2px solid var(--ink); background: #e9f0f7; }
+
+/* App shell: sidebar on desktop, bottom tab bar on phones */
+.shell { min-height: 100vh; display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto 1fr; }
+.topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: var(--ink); color: #fff; }
+.brand { font-weight: 700; margin-right: auto; }
+.me { font-size: .9rem; color: #b9c9d9; }
+.topbar .btn-quiet { color: #fff; }
+.nav { display: flex; flex-direction: column; gap: 4px; padding: 12px; border-right: 1px solid var(--line); background: var(--card); }
+.nav button { text-align: left; background: transparent; border-color: transparent; box-shadow: none; }
+.nav button[aria-current="page"] { background: #e9f0f7; font-weight: 700; border-left: 4px solid var(--led); }
+.page { padding: 24px; max-width: 960px; }
+.page h2 { margin-bottom: 12px; }
+
+@media (max-width: 800px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-brand { padding: 24px; }
+  .auth-brand h1 { font-size: 1.7rem; }
+  .shell { grid-template-columns: 1fr; padding-bottom: 64px; }
+  .nav { position: fixed; z-index: 5; left: 0; right: 0; bottom: 0; flex-direction: row; justify-content: space-around; border-right: 0; border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .nav button { flex: 1; text-align: center; }
+  .nav button[aria-current="page"] { border-left: 0; border-top: 4px solid var(--led); }
+  .page { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { button.tap { animation: none; } }

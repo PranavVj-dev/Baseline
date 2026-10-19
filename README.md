@@ -1,33 +1,39 @@
-# Baseline prototype
+# Baseline
 
-Working name for the two-app basketball data system (Coach App and Trainer App) built for the FLAME University capstone. Prototype v1 focuses on the riskiest assumption: **can one person log live match events fast enough?**
+Basketball match and development data system (FLAME University capstone). One server and database, two front-end apps.
+
+| Part | Folder | Address |
+|---|---|---|
+| Server + SQLite database | `server/` | http://localhost:3001 |
+| Coach app (staff and viewer accounts) | `apps/coach/` | http://localhost:5173 |
+| Trainer app (staff only) | `apps/trainer/` | http://localhost:5174 |
+| Shared logic and API client | `packages/shared/` | |
+| Shared design kit (login, shell, styles) | `packages/ui/` | |
 
 ## Run it
+
+Requires Node 22.13 or newer.
 
 ```
 npm install
 npm run dev
 ```
 
-To open it on a phone on the same Wi-Fi: `npm run dev -- --host`, then visit the Network address it prints.
+This starts all three. To run one: `npm run server`, `npm run coach`, `npm run trainer`.
 
-## What v1 contains
+To open an app on a phone on the same Wi-Fi, use `http://<your-laptop-ip>:5173` (or 5174). The apps forward `/api` to the server, so only that one address is needed.
 
-- Coach tab: live match entry (landscape) on one device, fully working with local state
-  - five-player screen with live points and fouls
-  - tap player, then action (shooting made/missed, rebounds, steals, blocks, fouls, missed pass)
-  - assist strip after a made field goal, 5 seconds, "None" to skip
-  - substitutions, quarter end with a detailed break table
-  - linear undo and redo with a toast naming the action
-  - opponent-lite scoring (+1, +2, +3)
-- Trainer and Viewer tabs: placeholders for now
+## Accounts
 
-Match data is saved in the browser (localStorage) so a refresh does not lose it. There is no backend, login or sync in v1.
+Sign up in the Coach app and choose **Coach or trainer** (staff) or **Player, parent or follower** (viewer). Staff accounts also work in the Trainer app, but you sign in there separately because each app runs on its own address.
 
-## How it works
+The database is `server/data/baseline.db` and is not committed. Delete it to reset everything.
 
-`src/shared/match.js` holds an append-only event log. Score, stats, quarter and who is on court are all derived from it, so undo and redo only void or restore events. All players are fictional.
+## Build stages
 
-## Not built yet
-
-Match mode lock, approximate court time and timeout toggle, trainer drills and hexagons, viewer pages, tournaments, backend and offline sync.
+1. Accounts, roles, app shells (done)
+2. Teams, roster, join and follow links
+3. Match setup, live entry saved to the server, undo/redo, quarter breaks, completion
+4. Viewer pages: matches list, live score, box score
+5. Trainer app: drills, results, attendance, hexagons
+6. Tournaments, career profile, push notifications

@@ -1,5 +1,3 @@
-import { ROSTER } from './roster.js';
-
 // Everything about a match is derived from one append-only event log.
 // Score, stats, quarter and on-court players are all computed from it,
 // so undo/redo is just voiding or restoring events.
@@ -25,9 +23,9 @@ export const ACTIONS = [
 
 export const newId = () => Math.random().toString(36).slice(2, 9);
 
-export const initialState = () => ({
-  roster: ROSTER,
-  starters: ROSTER.slice(0, 5).map((p) => p.id),
+export const initialState = (roster = []) => ({
+  roster,
+  starters: roster.slice(0, 5).map((p) => p.id),
   events: [],
   redo: [],
   ready: false, // true once the starting five is picked
@@ -66,7 +64,7 @@ export function reducer(state, action) {
     case 'SET_STARTERS':
       return { ...state, starters: action.ids, ready: true };
     case 'RESET':
-      return initialState();
+      return initialState(state.roster);
     default:
       return state;
   }

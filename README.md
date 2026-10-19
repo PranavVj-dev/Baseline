@@ -41,7 +41,7 @@ The database is `server/data/baseline.db` and is not committed. Delete it to res
 
 1. Accounts, roles, app shells (done)
 2. Teams, roster, staff invite links, follow links, team search (done)
-3. Match setup, live entry saved to the server, undo/redo, quarter breaks, completion
+3. Match setup, live entry saved to the server, undo/redo, quarter breaks, completion (done; opponents are typed names for now)
 4. Viewer pages: matches list, live score, box score
 5. Trainer app: drills, results, attendance, hexagons
 6. Tournaments, career profile, push notifications

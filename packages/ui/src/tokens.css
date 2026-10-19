@@ -83,3 +83,17 @@ select { font: inherit; min-height: 46px; padding: 0 10px; border: 1px solid var
 .inline.narrow { flex: 0 0 72px; }
 .btn-sm { min-height: 36px; padding: 0 10px; font-size: .85rem; }
 .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }
+
+.overlay { position: fixed; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(15, 42, 67, .5); }
+.modal { width: 100%; max-width: 560px; max-height: 92vh; max-height: 92dvh; overflow: auto; display: grid; gap: 12px; padding: 16px; background: var(--card); border-radius: 16px; }
+.modal.wide { max-width: 760px; }
+.seg { display: flex; gap: 4px; }
+.seg button { min-height: 34px; font-size: .85rem; }
+.seg button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+.picks { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.picks button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; box-shadow: 0 3px 0 #06131f; }
+.status-live { background: #fde8c4; color: #7a4a00; }

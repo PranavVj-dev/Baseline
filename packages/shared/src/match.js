@@ -121,3 +121,14 @@ export function describe(e, roster) {
     default: return e.type;
   }
 }
+
+// Score from an event list (used by the server and the apps so they always agree).
+export function scoreFromEvents(events) {
+  let home = 0;
+  let opp = 0;
+  liveEvents(events).forEach((e) => {
+    if (e.type === 'SHOT' && e.made) home += SHOTS.find((s) => s.key === e.shot)?.pts ?? 0;
+    else if (e.type === 'OPP') opp += e.pts;
+  });
+  return { home, opp };
+}

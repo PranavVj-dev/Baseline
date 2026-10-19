@@ -55,6 +55,33 @@ const MIGRATIONS = [
      team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
      PRIMARY KEY (user_id, team_id)
    )`,
+  `CREATE TABLE matches (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     team_id INTEGER NOT NULL REFERENCES teams(id),
+     opponent_name TEXT NOT NULL,
+     kind TEXT NOT NULL DEFAULT 'friendly' CHECK (kind IN ('friendly', 'official')),
+     status TEXT NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'live', 'completed', 'cancelled', 'abandoned')),
+     scheduled_at TEXT,
+     venue TEXT,
+     counts_for_career INTEGER NOT NULL DEFAULT 1,
+     starters TEXT,
+     final_home INTEGER,
+     final_opp INTEGER,
+     created_by INTEGER NOT NULL REFERENCES users(id),
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     started_at TEXT,
+     ended_at TEXT
+   );
+   CREATE TABLE match_events (
+     id TEXT PRIMARY KEY,
+     match_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+     seq INTEGER NOT NULL,
+     data TEXT NOT NULL,
+     voided INTEGER NOT NULL DEFAULT 0,
+     assist_by INTEGER,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE INDEX idx_events_match ON match_events (match_id, seq)`,
 ];
 
 db.exec('CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY)');

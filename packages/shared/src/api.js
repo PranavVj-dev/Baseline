@@ -16,6 +16,7 @@ export function createApi(tokenKey = 'baseline-token') {
     if (!res.ok) {
       const err = new Error(data.error || 'Something went wrong');
       err.status = res.status;
+      err.data = data;
       throw err;
     }
     return data;

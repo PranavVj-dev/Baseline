@@ -3,6 +3,6 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "scripts": { "dev": "node --watch src/index.js", "start": "node src/index.js" },
-  "dependencies": { "express": "4.21.2", "jsonwebtoken": "9.0.2" }
+  "scripts": { "dev": "node --watch src/index.js", "start": "node src/index.js", "seed": "node src/seed.js" },
+  "dependencies": { "@baseline/shared": "*", "express": "4.21.2", "jsonwebtoken": "9.0.2" }
 }

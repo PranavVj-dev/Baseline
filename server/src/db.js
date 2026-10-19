@@ -19,6 +19,42 @@ const MIGRATIONS = [
      role TEXT NOT NULL CHECK (role IN ('staff', 'viewer')),
      created_at TEXT NOT NULL DEFAULT (datetime('now'))
    )`,
+  `CREATE TABLE teams (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     age_group TEXT NOT NULL,
+     gender TEXT NOT NULL CHECK (gender IN ('girls', 'boys', 'mixed')),
+     created_by INTEGER NOT NULL REFERENCES users(id),
+     invite_code TEXT NOT NULL UNIQUE,
+     invite_expires_at TEXT NOT NULL,
+     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+   );
+   CREATE TABLE memberships (
+     team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     is_owner INTEGER NOT NULL DEFAULT 0,
+     PRIMARY KEY (team_id, user_id)
+   );
+   CREATE TABLE players (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     name TEXT NOT NULL,
+     date_of_birth TEXT,
+     hide_name INTEGER NOT NULL DEFAULT 0,
+     created_by INTEGER NOT NULL REFERENCES users(id)
+   );
+   CREATE TABLE team_players (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+     player_id INTEGER NOT NULL REFERENCES players(id),
+     jersey_no INTEGER,
+     start_date TEXT NOT NULL DEFAULT (date('now')),
+     end_date TEXT
+   );
+   CREATE TABLE follows (
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+     PRIMARY KEY (user_id, team_id)
+   )`,
 ];
 
 db.exec('CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY)');

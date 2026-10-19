@@ -27,12 +27,20 @@ To open an app on a phone on the same Wi-Fi, use `http://<your-laptop-ip>:5173` 
 
 Sign up in the Coach app and choose **Coach or trainer** (staff) or **Player, parent or follower** (viewer). Staff accounts also work in the Trainer app, but you sign in there separately because each app runs on its own address.
 
+## Demo data
+
+```
+npm run seed
+```
+
+Creates `coach@demo.in`, `trainer@demo.in` and `parent@demo.in` (password `demo12345`) and a demo team with ten players. Safe to run again. To use real names, put one name per line in `server/data/roster.local.txt`; that folder is ignored by git, so the names are never committed.
+
 The database is `server/data/baseline.db` and is not committed. Delete it to reset everything.
 
 ## Build stages
 
 1. Accounts, roles, app shells (done)
-2. Teams, roster, join and follow links
+2. Teams, roster, staff invite links, follow links, team search (done)
 3. Match setup, live entry saved to the server, undo/redo, quarter breaks, completion
 4. Viewer pages: matches list, live score, box score
 5. Trainer app: drills, results, attendance, hexagons

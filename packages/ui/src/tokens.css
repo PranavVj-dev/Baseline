@@ -63,3 +63,23 @@ button.tap { animation: tap .28s ease-out; }
   .page { padding: 16px; }
 }
 @media (prefers-reduced-motion: reduce) { button.tap { animation: none; } }
+
+/* Shared building blocks */
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row.between { justify-content: space-between; }
+.stack { display: grid; gap: 16px; }
+.stack-s { display: grid; gap: 8px; }
+.cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.team-card { width: 100%; display: grid; gap: 2px; text-align: left; padding: 12px 14px; min-height: 0; }
+select { font: inherit; min-height: 46px; padding: 0 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.badge { display: inline-block; font-size: .75rem; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: #e9f0f7; color: var(--ink); }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.list .grow { flex: 1; min-width: 120px; }
+.jersey { min-width: 36px; text-align: center; font-weight: 700; color: var(--ink); }
+.notice { padding: 10px 12px; border-radius: 10px; background: #e9f0f7; display: flex; gap: 8px; justify-content: space-between; align-items: center; margin: 0 0 12px; }
+.linkbox { display: flex; gap: 8px; }
+.linkbox input, .inline { flex: 1; min-width: 0; font: inherit; font-size: .9rem; padding: 0 10px; min-height: 40px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.inline.narrow { flex: 0 0 72px; }
+.btn-sm { min-height: 36px; padding: 0 10px; font-size: .85rem; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; }

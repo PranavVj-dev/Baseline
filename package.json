@@ -8,7 +8,8 @@
     "dev": "concurrently -n server,coach,trainer -c blue,green,magenta \"npm run dev -w server\" \"npm run dev -w apps/coach\" \"npm run dev -w apps/trainer\"",
     "server": "npm run dev -w server",
     "coach": "npm run dev -w apps/coach",
-    "trainer": "npm run dev -w apps/trainer"
+    "trainer": "npm run dev -w apps/trainer",
+    "seed": "npm run seed -w server"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",

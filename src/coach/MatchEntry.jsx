@@ -3,21 +3,57 @@ import {
   SHOTS, ACTIONS, reducer, initialState, newId, liveEvents,
   quarterOf, onCourtIds, derive, describe,
 } from '../shared/match.js';
+import { TEAM_NAME } from '../shared/roster.js';
 
-const KEY = 'baseline-match-v1';
+const KEY = 'baseline-match-v2';
 const load = () => {
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && s.events) return s; } catch { /* ignore */ }
   return initialState();
 };
 
+// Shows the number, and when it changes a +2 / +3 rises from below and drops into it.
+function Score({ label, value }) {
+  const prev = useRef(value);
+  const [pops, setPops] = useState([]);
+  useEffect(() => {
+    const diff = value - prev.current;
+    prev.current = value;
+    if (!diff) return;
+    const id = newId();
+    setPops((p) => [...p, { id, diff }]);
+    setTimeout(() => setPops((p) => p.filter((x) => x.id !== id)), 1000);
+  }, [value]);
+  return (
+    <div className={`score${pops.length ? ' hot' : ''}`}>
+      <span className="who">{label}</span>
+      <span className="digits">{value}</span>
+      {pops.map((p) => (
+        <span key={p.id} className={`pop${p.diff < 0 ? ' neg' : ''}`}>{p.diff > 0 ? '+' : '−'}{Math.abs(p.diff)}</span>
+      ))}
+    </div>
+  );
+}
+
+function Starters({ roster, onStart }) {
+  const [sel, setSel] = useState([]);
+  const toggle = (id) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : s.length < 5 ? [...s, id] : s));
+  return (
+    <div className="overlay">
+      <div className="sheet">
+        <div className="sheet-head"><strong>Pick the starting five</strong><span>{sel.length} of 5</span></div>
+        <div className="names">
+          {roster.map((p) => <button key={p.id} className={sel.includes(p.id) ? 'on' : ''} onClick={() => toggle(p.id)}>{p.name}</button>)}
+        </div>
+        <button className="primary" disabled={sel.length !== 5} onClick={() => onStart(sel)}>Start match</button>
+      </div>
+    </div>
+  );
+}
+
 function BreakTable({ state, quarter, onClose }) {
   const [scope, setScope] = useState('quarter');
   const { stats } = derive(state, scope === 'quarter' ? quarter : undefined);
-  const fg = (s) => {
-    const m = s['2PT_M'] + s.LAYUP_M + s['3PT_M'];
-    const a = s['2PT_A'] + s.LAYUP_A + s['3PT_A'];
-    return `${m}/${a}`;
-  };
+  const fg = (s) => `${s['2PT_M'] + s.LAYUP_M + s['3PT_M']}/${s['2PT_A'] + s.LAYUP_A + s['3PT_A']}`;
   return (
     <div className="overlay">
       <div className="sheet wide">
@@ -36,7 +72,7 @@ function BreakTable({ state, quarter, onClose }) {
                 const s = stats[p.id];
                 return (
                   <tr key={p.id}>
-                    <td>#{p.no} {p.name}</td><td>{s.PTS}</td><td>{fg(s)}</td>
+                    <td>{p.name}</td><td>{s.PTS}</td><td>{fg(s)}</td>
                     <td>{s['3PT_M']}/{s['3PT_A']}</td><td>{s.FT_M}/{s.FT_A}</td>
                     <td>{s.REB}</td><td>{s.AST}</td><td>{s.STEAL}</td><td>{s.BLOCK}</td><td>{s.PF}</td>
                   </tr>
@@ -71,29 +107,33 @@ export default function MatchEntry() {
   const q = quarterOf(state.events);
   const byId = (id) => state.roster.find((p) => p.id === id);
 
+  if (!state.ready) return <Starters roster={state.roster} onStart={(sel) => dispatch({ type: 'SET_STARTERS', ids: sel })} />;
+
   const flash = (text) => {
     setToast(text);
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   };
   const log = (event) => { const id = newId(); dispatch({ type: 'LOG', event: { ...event, id } }); return id; };
+  const closeAssist = () => { clearTimeout(assistTimer.current); setAssist(null); };
+  const choose = (id) => { closeAssist(); setPicked(picked === id ? null : id); };
 
   const logShot = (shot, made) => {
     const id = log({ type: 'SHOT', playerId: picked, shot, made });
-    clearTimeout(assistTimer.current);
+    closeAssist();
     if (made && shot !== 'FT') {
       setAssist({ eventId: id, scorer: picked });
       assistTimer.current = setTimeout(() => setAssist(null), 5000);
-    } else setAssist(null);
+    }
     setPicked(null);
   };
-  const logAction = (action) => { log({ type: 'ACTION', playerId: picked, action }); setAssist(null); setPicked(null); };
+  const logAction = (action) => { log({ type: 'ACTION', playerId: picked, action }); closeAssist(); setPicked(null); };
 
   const undo = () => {
     const ev = liveEvents(state.events).at(-1);
     if (!ev) return;
     dispatch({ type: 'UNDO' });
-    setAssist(null);
+    closeAssist();
     flash(`Undone: ${describe(ev, state.roster)}`);
   };
   const redo = () => {
@@ -106,91 +146,88 @@ export default function MatchEntry() {
   const doSub = (inId) => { log({ type: 'SUB', out: subOut, in: inId }); setSubOut(undefined); };
 
   return (
-    <main className="match">
-      <header className="board">
-        <div className="side"><span className="who">Home</span><span className="num">{home}</span></div>
-        <div className="mid"><span className="qtr">Q{q}</span></div>
-        <div className="side"><span className="who">Opponent</span><span className="num">{opp}</span></div>
-      </header>
-
-      <div className="bar">
-        <button onClick={undo} disabled={!liveEvents(state.events).length}>Undo</button>
-        <button onClick={redo} disabled={!state.redo.length}>Redo</button>
-        <button onClick={() => setSubOut(null)}>Sub</button>
-        <button onClick={endQuarter}>End Q{q}</button>
-      </div>
-
-      <section className="players">
-        {court.map((p) => {
-          const s = stats[p.id];
-          return (
-            <button key={p.id} className="player" onClick={() => setPicked(p.id)}>
-              <span className="jersey">{p.no}</span>
-              <span className="pname">{p.name}</span>
-              <span className="mini">{s.PTS} pts, {s.PF} fouls</span>
-            </button>
-          );
-        })}
-      </section>
-
-      <section className="opp">
-        <span>Opponent score</span>
-        {[1, 2, 3].map((n) => <button key={n} onClick={() => { log({ type: 'OPP', pts: n }); }}>+{n}</button>)}
-      </section>
-
-      <footer className="foot">
-        <button className="link" onClick={() => { if (confirm('Clear this match and start a new one?')) dispatch({ type: 'RESET' }); }}>New match</button>
-      </footer>
-
-      {picked && (
-        <div className="overlay" onClick={() => setPicked(null)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-head"><strong>#{byId(picked).no} {byId(picked).name}</strong><button className="link" onClick={() => setPicked(null)}>Close</button></div>
-            {SHOTS.map((s) => (
-              <div className="shotrow" key={s.key}>
-                <span>{s.label}</span>
-                <button className="made" onClick={() => logShot(s.key, true)}>Made</button>
-                <button className="missed" onClick={() => logShot(s.key, false)}>Missed</button>
-              </div>
-            ))}
-            <div className="grid">
-              {ACTIONS.map((a) => <button key={a.key} onClick={() => logAction(a.key)}>{a.label}</button>)}
-            </div>
+    <>
+      <div className="rotate">Turn your phone sideways to log a match.</div>
+      <main className="match">
+        <aside className="left">
+          <div className="board">
+            <div className="qtr">Q{q}</div>
+            <Score label={TEAM_NAME} value={home} />
+            <Score label="Opponent" value={opp} />
           </div>
-        </div>
-      )}
-
-      {subOut !== undefined && (
-        <div className="overlay" onClick={() => setSubOut(undefined)}>
-          <div className="sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="sheet-head"><strong>{subOut === null ? 'Who comes off?' : 'Who comes on?'}</strong><button className="link" onClick={() => setSubOut(undefined)}>Cancel</button></div>
-            <div className="grid">
-              {(subOut === null ? court : bench).map((p) => (
-                <button key={p.id} onClick={() => (subOut === null ? setSubOut(p.id) : doSub(p.id))}>#{p.no} {p.name}</button>
-              ))}
-            </div>
+          <div className="opprow">
+            <span>Opponent</span>
+            {[1, 2, 3].map((n) => <button key={n} onClick={() => log({ type: 'OPP', pts: n })}>+{n}</button>)}
           </div>
-        </div>
-      )}
+          <div className="ctrl">
+            <button onClick={undo} disabled={!liveEvents(state.events).length}>Undo</button>
+            <button onClick={redo} disabled={!state.redo.length}>Redo</button>
+            <button onClick={() => setSubOut(null)}>Sub</button>
+            <button onClick={endQuarter}>End Q{q}</button>
+          </div>
+          <button className="link" onClick={() => { if (confirm('Clear this match and start a new one?')) { dispatch({ type: 'RESET' }); setPicked(null); closeAssist(); } }}>New match</button>
+        </aside>
 
-      {breakQ && <BreakTable state={state} quarter={breakQ} onClose={() => setBreakQ(null)} />}
+        <section className="players">
+          {court.map((p) => {
+            const s = stats[p.id];
+            return (
+              <button key={p.id} className={`player${picked === p.id ? ' sel' : ''}`} onClick={() => choose(p.id)}>
+                <span className="pname">{p.name}</span>
+                <span className="mini">{s.PTS} pts, {s.PF} fouls</span>
+              </button>
+            );
+          })}
+        </section>
 
-      {assist && (
-        <div className="assist">
-          <span>Assist by?</span>
-          {court.filter((p) => p.id !== assist.scorer).map((p) => (
-            <button key={p.id} onClick={() => { dispatch({ type: 'ASSIST', eventId: assist.eventId, by: p.id }); setAssist(null); }}>#{p.no}</button>
+        <section className="pad">
+          <div className="hint">{picked ? `Logging for ${byId(picked).name}` : 'Tap a player'}</div>
+          {SHOTS.map((s) => (
+            <div className="shotrow" key={s.key}>
+              <span>{s.label}</span>
+              <button className="made" disabled={!picked} onClick={() => logShot(s.key, true)}>Made</button>
+              <button className="missed" disabled={!picked} onClick={() => logShot(s.key, false)}>Missed</button>
+            </div>
           ))}
-          <button className="none" onClick={() => setAssist(null)}>None</button>
-        </div>
-      )}
+          <div className="acts">
+            {ACTIONS.map((a) => <button key={a.key} disabled={!picked} onClick={() => logAction(a.key)}>{a.label}</button>)}
+          </div>
+          {assist && (
+            <div className="assist" key={assist.eventId}>
+              <div className="ask">Assist on {byId(assist.scorer).name}'s basket?</div>
+              <div className="who4">
+                {court.filter((p) => p.id !== assist.scorer).map((p) => (
+                  <button key={p.id} onClick={() => { dispatch({ type: 'ASSIST', eventId: assist.eventId, by: p.id }); closeAssist(); }}>{p.name}</button>
+                ))}
+              </div>
+              <button className="none" onClick={closeAssist}>No assist</button>
+              <i className="timer" />
+            </div>
+          )}
+        </section>
 
-      {toast && (
-        <div className="toast">
-          <span>{toast}</span>
-          {state.redo.length > 0 && <button onClick={redo}>Redo</button>}
-        </div>
-      )}
-    </main>
+        {subOut !== undefined && (
+          <div className="overlay" onClick={() => setSubOut(undefined)}>
+            <div className="sheet" onClick={(e) => e.stopPropagation()}>
+              <div className="sheet-head"><strong>{subOut === null ? 'Who comes off?' : 'Who comes on?'}</strong><button className="link" onClick={() => setSubOut(undefined)}>Cancel</button></div>
+              <div className="names">
+                {(subOut === null ? court : bench).map((p) => (
+                  <button key={p.id} onClick={() => (subOut === null ? setSubOut(p.id) : doSub(p.id))}>{p.name}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {breakQ && <BreakTable state={state} quarter={breakQ} onClose={() => setBreakQ(null)} />}
+
+        {toast && (
+          <div className="toast">
+            <span>{toast}</span>
+            {state.redo.length > 0 && <button onClick={redo}>Redo</button>}
+          </div>
+        )}
+      </main>
+    </>
   );
 }

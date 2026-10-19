@@ -1,3 +1,5 @@
+import { ROSTER } from './roster.js';
+
 // Everything about a match is derived from one append-only event log.
 // Score, stats, quarter and on-court players are all computed from it,
 // so undo/redo is just voiding or restoring events.
@@ -20,9 +22,6 @@ export const ACTIONS = [
   { key: 'D_FOUL', label: 'Def foul' },
 ];
 
-// Fictional players only. No real names or ages in the repo.
-const NAMES = ['Ananya', 'Divya', 'Kavya', 'Meera', 'Nisha', 'Priya', 'Riya', 'Sana', 'Tara', 'Uma'];
-export const ROSTER = NAMES.map((name, i) => ({ id: `p${i + 1}`, name, no: i + 4 }));
 
 export const newId = () => Math.random().toString(36).slice(2, 9);
 
@@ -31,6 +30,7 @@ export const initialState = () => ({
   starters: ROSTER.slice(0, 5).map((p) => p.id),
   events: [],
   redo: [],
+  ready: false, // true once the starting five is picked
 });
 
 export const liveEvents = (events) => events.filter((e) => !e.voided);
@@ -63,6 +63,8 @@ export function reducer(state, action) {
         redo: state.redo.slice(0, -1),
       };
     }
+    case 'SET_STARTERS':
+      return { ...state, starters: action.ids, ready: true };
     case 'RESET':
       return initialState();
     default:
@@ -110,7 +112,7 @@ export function derive(state, quarter) {
 export function describe(e, roster) {
   const p = (id) => {
     const r = roster.find((x) => x.id === id);
-    return r ? `#${r.no} ${r.name}` : '';
+    return r ? r.name : '';
   };
   switch (e.type) {
     case 'SHOT': return `${p(e.playerId)} ${e.shot} ${e.made ? 'made' : 'missed'}`;

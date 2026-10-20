@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AuthScreen, AppShell, useAuth } from '@baseline/ui';
+import Players from './pages/Players.jsx';
 
 const NAV = [
   { key: 'drills', label: 'Drills' },
@@ -36,7 +37,7 @@ export default function App() {
   return (
     <AppShell appName="Baseline Trainer" nav={NAV} current={page} onNavigate={setPage}>
       <h2>{NAV.find((n) => n.key === page).label}</h2>
-      <div className="card"><p className="muted">Coming next: {COMING[page]}</p></div>
+      {page === 'players' ? <Players /> : <div className="card"><p className="muted">Coming next: {COMING[page]}</p></div>}
     </AppShell>
   );
 }

@@ -6,7 +6,7 @@ const CHOICES = {
   viewer: { title: 'Player, parent or follower', text: 'I want to follow matches and see progress.' },
 };
 
-export default function AuthScreen({ appName, tagline, roles }) {
+export default function AuthScreen({ appName, tagline, roles, onGuest }) {
   const { login, signup } = useAuth();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({ name: '', email: '', password: '', role: roles.length === 1 ? roles[0] : '' });
@@ -69,6 +69,7 @@ export default function AuthScreen({ appName, tagline, roles }) {
         <button type="button" className="btn btn-quiet" onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}>
           {mode === 'login' ? 'New here? Create an account' : 'Already have an account? Sign in'}
         </button>
+        {onGuest && <button type="button" className="btn btn-quiet" onClick={onGuest}>Browse matches without an account</button>}
       </form>
     </div>
   );

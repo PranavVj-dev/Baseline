@@ -34,3 +34,15 @@ export function requireAuth(req, res, next) {
 
 export const requireRole = (role) => (req, res, next) =>
   req.user.role === role ? next() : res.status(403).json({ error: 'Not available for your account type' });
+
+// For public pages: signed-in callers are recognised, everyone else carries on as a guest.
+export function optionalAuth(req, _res, next) {
+  const m = /^Bearer (.+)$/.exec(req.headers.authorization || '');
+  if (m) {
+    try {
+      const { sub } = jwt.verify(m[1], SECRET);
+      req.user = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(sub) ?? null;
+    } catch { req.user = null; }
+  }
+  next();
+}

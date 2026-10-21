@@ -82,6 +82,15 @@ const MIGRATIONS = [
      created_at TEXT NOT NULL DEFAULT (datetime('now'))
    );
    CREATE INDEX idx_events_match ON match_events (match_id, seq)`,
+  `ALTER TABLE players ADD COLUMN claim_code TEXT;
+   CREATE UNIQUE INDEX idx_players_claim ON players (claim_code);
+   CREATE TABLE player_links (
+     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+     player_id INTEGER NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+     relation TEXT NOT NULL CHECK (relation IN ('player', 'parent')),
+     created_at TEXT NOT NULL DEFAULT (datetime('now')),
+     PRIMARY KEY (user_id, player_id)
+   )`,
 ];
 
 db.exec('CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY)');

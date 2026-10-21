@@ -93,10 +93,12 @@ export function derive(state, quarter) {
     const s = stats[e.playerId];
     if (e.type === 'SHOT') {
       const shot = SHOTS.find((x) => x.key === e.shot);
-      s[`${e.shot}_A`] += 1;
-      if (e.made) { s[`${e.shot}_M`] += 1; s.PTS += shot.pts; }
+      if (s) {
+        s[`${e.shot}_A`] += 1;
+        if (e.made) { s[`${e.shot}_M`] += 1; s.PTS += shot.pts; }
+      }
       if (e.assistBy && stats[e.assistBy]) stats[e.assistBy].AST += 1;
-    } else if (e.type === 'ACTION') {
+    } else if (e.type === 'ACTION' && s) {
       if (e.action === 'O_REB' || e.action === 'D_REB') s.REB += 1;
       else if (e.action === 'O_FOUL' || e.action === 'D_FOUL') s.PF += 1;
       else s[e.action] += 1;

@@ -15,9 +15,37 @@ function CopyBox({ value }) {
   );
 }
 
-function PlayerRow({ p, canEdit, teamId, onChange, onError }) {
+function PlayerAccess({ playerId }) {
+  const { api } = useAuth();
+  const { data, error, reload } = useLoad(`/players/${playerId}/access`);
+  if (!data) return <div style={{ flexBasis: '100%' }}>{error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>}</div>;
+  const link = `${window.location.origin}/?claim=${data.code}`;
+  return (
+    <div className="stack-s" style={{ flexBasis: '100%' }}>
+      <span className="muted">Send this link to the player or a parent. They create a player or parent account and open it to link this profile.</span>
+      <CopyBox value={link} />
+      <div className="row">
+        <span className="muted">Code: {data.code}</span>
+        <button className="btn-sm" onClick={() => api.request(`/players/${playerId}/access/regenerate`, { method: 'POST' }).then(reload)}>Make a new code</button>
+      </div>
+      {data.links.length === 0 ? <span className="muted">Nobody has linked this profile yet.</span> : (
+        <ul className="list">
+          {data.links.map((l) => (
+            <li key={l.user_id}>
+              <span className="grow">{l.name} ({l.relation})</span>
+              <button className="btn-sm btn-quiet" onClick={() => api.request(`/players/${playerId}/links/${l.user_id}`, { method: 'DELETE' }).then(reload)}>Unlink</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function PlayerRow({ p, canEdit, teamId, onChange, onError, onOpenPlayer }) {
   const { api } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [access, setAccess] = useState(false);
   const [name, setName] = useState(p.name);
   const [no, setNo] = useState(p.jersey_no ?? '');
   const base = `/teams/${teamId}/players/${p.id}`;
@@ -39,16 +67,19 @@ function PlayerRow({ p, canEdit, teamId, onChange, onError }) {
       <span className="grow">{p.name} {p.hide_name && <span className="badge">name hidden publicly</span>}</span>
       {canEdit && (
         <>
+          <button className="btn-sm" onClick={() => onOpenPlayer(p.id)}>Profile</button>
+          <button className="btn-sm" onClick={() => setAccess(!access)}>Access</button>
           <button className="btn-sm" onClick={() => setEditing(true)}>Edit</button>
           <button className="btn-sm" onClick={() => run(api.request(base, { method: 'PATCH', body: { hide_name: !p.hide_name } }))}>{p.hide_name ? 'Show name' : 'Hide name'}</button>
           <button className="btn-sm btn-quiet" onClick={() => { if (confirm(`Remove ${p.name} from this team?`)) run(api.request(base, { method: 'DELETE' })); }}>Remove</button>
         </>
       )}
+      {access && <PlayerAccess playerId={p.id} />}
     </li>
   );
 }
 
-export default function TeamDetail({ teamId, onBack }) {
+export default function TeamDetail({ teamId, onBack, onOpenPlayer }) {
   const { api } = useAuth();
   const { data: d, error, loading, reload } = useLoad(`/teams/${teamId}`);
   const [form, setForm] = useState({ name: '', jersey_no: '', date_of_birth: '' });
@@ -91,7 +122,7 @@ export default function TeamDetail({ teamId, onBack }) {
         {err && <p className="error">{err}</p>}
         {d.roster.length === 0 ? <p className="muted">No players yet.</p> : (
           <ul className="list">
-            {d.roster.map((p) => <PlayerRow key={p.id} p={p} teamId={teamId} canEdit={d.isMember} onChange={() => { setErr(''); reload(); }} onError={setErr} />)}
+            {d.roster.map((p) => <PlayerRow key={p.id} p={p} teamId={teamId} canEdit={d.isMember} onOpenPlayer={onOpenPlayer} onChange={() => { setErr(''); reload(); }} onError={setErr} />)}
           </ul>
         )}
       </section>

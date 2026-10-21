@@ -119,3 +119,5 @@ matches.post('/:id/abandon', needMatch, needLive, (req, res) => {
   db.prepare("UPDATE matches SET status = 'abandoned', ended_at = datetime('now') WHERE id = ?").run(req.match.id);
   res.json({ ok: true });
 });
+
+export { COLS, shape, eventsOf };

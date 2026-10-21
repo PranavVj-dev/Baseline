@@ -2,6 +2,8 @@ import express from 'express';
 import { db } from './db.js';
 import { teams } from './teams.js';
 import { matches } from './matches.js';
+import { publicApi } from './public.js';
+import { players } from './players.js';
 import { hashPassword, checkPassword, sign, requireAuth } from './auth.js';
 
 const app = express();
@@ -44,6 +46,8 @@ app.get('/api/me', requireAuth, (req, res) => res.json({ user: req.user }));
 
 app.use('/api/teams', teams);
 app.use('/api/matches', matches);
+app.use('/api/public', publicApi);
+app.use('/api/players', players);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, '0.0.0.0', () => console.log(`Baseline server running on http://localhost:${PORT}`));

@@ -1,13 +1,19 @@
 import { useAuth } from './auth.jsx';
 
-export default function AppShell({ appName, nav, current, onNavigate, children }) {
+export default function AppShell({ appName, nav, current, onNavigate, onSignIn, children }) {
   const { user, logout } = useAuth();
   return (
     <div className="shell">
       <header className="topbar">
         <span className="brand">{appName}</span>
-        <span className="me">{user.name}</span>
-        <button className="btn btn-quiet" onClick={logout}>Sign out</button>
+        {user ? (
+          <>
+            <span className="me">{user.name}</span>
+            <button className="btn btn-quiet" onClick={logout}>Sign out</button>
+          </>
+        ) : (
+          <button className="btn btn-quiet" onClick={onSignIn}>Sign in</button>
+        )}
       </header>
       <nav className="nav" aria-label="Main">
         {nav.map((n) => (

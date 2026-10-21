@@ -3,7 +3,7 @@ import { useAuth, useLoad } from '@baseline/ui';
 
 export const when = (iso) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'No date set');
 
-function MatchCard({ m, onOpen }) {
+export function MatchCard({ m, onOpen }) {
   const showScore = ['live', 'completed', 'abandoned'].includes(m.status);
   const final = m.status === 'completed' && m.final_home != null ? { home: m.final_home, opp: m.final_opp } : m.score;
   return (

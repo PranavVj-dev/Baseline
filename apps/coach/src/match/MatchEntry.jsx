@@ -49,6 +49,7 @@ function Live({ data, api, onExit }) {
   const [toast, setToast] = useState(null);
   const [subOut, setSubOut] = useState(undefined); // undefined = closed, null = choosing who leaves
   const [breakQ, setBreakQ] = useState(null);
+  const [lineup, setLineup] = useState(null); // { quarter, sel } while choosing who plays the next quarter
   const [finishing, setFinishing] = useState(false);
   const assistTimer = useRef();
   const toastTimer = useRef();
@@ -101,6 +102,14 @@ function Live({ data, api, onExit }) {
   };
   const doSub = (inId) => { log({ type: 'SUB', out: subOut, in: inId }); setSubOut(undefined); };
   const endQuarter = () => { log({ type: 'END_Q' }); setBreakQ(q); };
+  // Changes between quarters are turned into ordinary substitutions, so stats and undo work as before.
+  const startQuarter = () => {
+    const outs = ids.filter((id) => !lineup.sel.includes(id));
+    const ins = lineup.sel.filter((id) => !ids.includes(id));
+    outs.forEach((out, i) => log({ type: 'SUB', out, in: ins[i] }));
+    setLineup(null);
+  };
+  const pickForQuarter = (id) => setLineup((l) => ({ ...l, sel: l.sel.includes(id) ? l.sel.filter((x) => x !== id) : l.sel.length < 5 ? [...l.sel, id] : l.sel }));
 
   return (
     <div className="entry">
@@ -179,7 +188,25 @@ function Live({ data, api, onExit }) {
           <div className="modal wide">
             <strong>End of Q{breakQ}: {match.team_name} {score.home}, {match.opponent_name} {score.opp}</strong>
             <BoxScore roster={roster} events={state.events} quarter={breakQ} />
-            <button className="btn btn-primary" onClick={() => setBreakQ(null)}>Start Q{breakQ + 1}</button>
+            <button className="btn btn-primary" onClick={() => { setLineup({ quarter: breakQ + 1, sel: ids }); setBreakQ(null); }}>Next: who plays Q{breakQ + 1}?</button>
+          </div>
+        </div>
+      )}
+
+      {lineup && (
+        <div className="overlay">
+          <div className="modal">
+            <strong>Who plays Q{lineup.quarter}?</strong>
+            <span className="muted">The five who were on court are already selected. Tap to change, and pick exactly five.</span>
+            <div className="picks">
+              {roster.map((p) => <button key={p.id} aria-pressed={lineup.sel.includes(p.id)} onClick={() => pickForQuarter(p.id)}>{p.name}</button>)}
+            </div>
+            <p className="muted">
+              {lineup.sel.length !== 5 ? `${lineup.sel.length} of 5 picked`
+                : ids.every((id) => lineup.sel.includes(id)) ? 'No changes: same five as before.'
+                : `Off: ${ids.filter((id) => !lineup.sel.includes(id)).map((id) => byId(id).name).join(', ')}. On: ${lineup.sel.filter((id) => !ids.includes(id)).map((id) => byId(id).name).join(', ')}.`}
+            </p>
+            <button className="btn btn-primary" disabled={lineup.sel.length !== 5} onClick={startQuarter}>Start Q{lineup.quarter}</button>
           </div>
         </div>
       )}

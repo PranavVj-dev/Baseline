@@ -56,3 +56,8 @@
 .toast { position: fixed; z-index: 40; left: 50%; transform: translateX(-50%); top: calc(10px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; padding: 6px 6px 6px 14px; background: var(--text); color: #fff; border-radius: 12px; }
 .toast button { min-height: 34px; background: #fff; color: var(--text); box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .hot .digits, .timer, .hold.holding::after { animation: none; } .pop { animation-duration: .01s; } }
+
+.qtr { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.qtr b { font-size: 1.5rem; font-variant-numeric: tabular-nums; color: var(--led); }
+.bar .clockbtn { background: var(--ok); border-color: var(--ok); box-shadow: 0 3px 0 #0f4a2d; color: #fff; }
+.bar .clockbtn.on { background: #fff; color: var(--bad); border: 2px solid var(--bad); box-shadow: 0 3px 0 #e6b8b0; }

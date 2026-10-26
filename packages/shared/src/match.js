@@ -43,7 +43,7 @@ export function reducer(state, action) {
     case 'ASSIST': // stored on the basket itself, so one undo reverses both
       return { ...state, events: state.events.map((e) => (e.id === action.eventId ? { ...e, assistBy: action.by } : e)) };
     case 'UNDO': {
-      const idx = state.events.map((e) => !e.voided).lastIndexOf(true);
+      const idx = state.events.map((e) => !e.voided && !e.type.startsWith('CLOCK')).lastIndexOf(true); // undo skips clock taps
       if (idx < 0) return state;
       const target = state.events[idx];
       return {
@@ -133,4 +133,41 @@ export function scoreFromEvents(events) {
     else if (e.type === 'OPP') opp += e.pts;
   });
   return { home, opp };
+}
+
+// Latest event that Undo would reverse (clock taps are not undone; just tap the clock again).
+export const lastUndoable = (events) => liveEvents(events).filter((e) => !e.type.startsWith('CLOCK')).at(-1);
+
+export const fmtClock = (sec) => {
+  const s = Math.max(0, Math.floor(sec || 0));
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+};
+
+// Playing time from the event log. Time only counts while the clock is running, and each
+// running second goes to the five players on court at that moment. Ending a quarter pauses the clock.
+// Pass `now` to include the time since the last event while a match is live. Pass `onlyQuarter` for one quarter.
+export function playingTime(state, now = null, onlyQuarter = null) {
+  const seconds = Object.fromEntries(state.roster.map((p) => [p.id, 0]));
+  const quarters = {};
+  let court = [...state.starters];
+  let running = false;
+  let last = null;
+  let q = 1;
+  const advance = (ts) => {
+    if (running && last != null) {
+      const d = Math.max(0, ts - last) / 1000;
+      quarters[q] = (quarters[q] || 0) + d;
+      if (!onlyQuarter || q === onlyQuarter) court.forEach((id) => { if (id in seconds) seconds[id] += d; });
+    }
+    last = ts;
+  };
+  liveEvents(state.events).forEach((e) => {
+    advance(e.ts);
+    if (e.type === 'CLOCK_START') running = true;
+    else if (e.type === 'CLOCK_PAUSE') running = false;
+    else if (e.type === 'END_Q') { running = false; q += 1; }
+    else if (e.type === 'SUB') court = court.map((id) => (id === e.out ? e.in : id));
+  });
+  if (now != null) advance(now);
+  return { seconds, quarters, running, quarter: q };
 }

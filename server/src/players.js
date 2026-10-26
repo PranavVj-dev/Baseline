@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import crypto from 'node:crypto';
-import { SHOTS, derive, scoreFromEvents } from '@baseline/shared';
+import { SHOTS, derive, scoreFromEvents, playingTime } from '@baseline/shared';
 import { db } from './db.js';
 import { requireAuth, requireRole } from './auth.js';
 import { COLS, shape, eventsOf } from './matches.js';
@@ -93,6 +93,7 @@ players.get('/:pid/profile', (req, res) => {
         counted: m.status === 'completed' && m.counts_for_career && (!official || m.kind === 'official'),
         result: m.final_home != null ? { home: m.final_home, opp: m.final_opp } : tracked,
         stats: derive({ roster, events }).stats[pid],
+        min: Math.round(playingTime({ roster, events, starters: m.starters }).seconds[pid] ?? 0),
       });
     }
   }
@@ -109,6 +110,7 @@ players.get('/:pid/profile', (req, res) => {
     return [...map.values()].map((g) => ({ label: g.label, ...summarize(g.t, g.games) }));
   };
   const counted = list.filter((x) => x.counted);
+  const timed = counted.filter((x) => x.min > 0); // games where the clock was used
   const total = zero();
   counted.forEach((x) => SUMS.forEach((k) => { total[k] += x.stats[k]; }));
 
@@ -116,7 +118,7 @@ players.get('/:pid/profile', (req, res) => {
     player: { id: p.id, name: p.name, date_of_birth: staff ? p.date_of_birth : undefined },
     teams: teamsOf(pid),
     scope: official ? 'official' : 'all',
-    career: summarize(total, counted.length),
+    career: { ...summarize(total, counted.length), mpg: timed.length ? Math.round(timed.reduce((a, x) => a + x.min, 0) / timed.length / 6) / 10 : null },
     by_year: group('year', (x) => x.year),
     by_team: group('team_id', (x) => x.team_name),
     matches: list,

@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { SHOTS, ACTIONS, reducer, newId, liveEvents, quarterOf, onCourtIds, derive, scoreFromEvents, describe } from '@baseline/shared';
+import { SHOTS, ACTIONS, reducer, newId, liveEvents, quarterOf, onCourtIds, derive, scoreFromEvents, describe, lastUndoable, playingTime, fmtClock } from '@baseline/shared';
 import { useAuth, useLoad } from '@baseline/ui';
 import { useSync, applyQueue, queueKey } from './useSync.js';
 import BoxScore from './BoxScore.jsx';
@@ -61,6 +61,14 @@ function Live({ data, api, onExit }) {
   const { stats } = derive(state);
   const score = scoreFromEvents(state.events);
   const q = quarterOf(state.events);
+  const running = playingTime(state).running;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, [running]);
+  const pt = playingTime(state, running ? now : null);
 
   const flash = (text) => { setToast(text); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 4000); };
   const closeAssist = () => { clearTimeout(assistTimer.current); setAssist(null); };
@@ -70,6 +78,7 @@ function Live({ data, api, onExit }) {
     sync.enqueue({ k: 'event', body: ev });
     return ev.id;
   };
+  const toggleClock = () => { setNow(Date.now()); log({ type: running ? 'CLOCK_PAUSE' : 'CLOCK_START' }); };
   const choose = (id) => { closeAssist(); setPicked(picked === id ? null : id); };
 
   const logShot = (shot, made) => {
@@ -85,7 +94,7 @@ function Live({ data, api, onExit }) {
   const giveAssist = (by) => { dispatch({ type: 'ASSIST', eventId: assist.eventId, by }); sync.enqueue({ k: 'assist', id: assist.eventId, by }); closeAssist(); };
 
   const undo = () => {
-    const ev = liveEvents(state.events).at(-1);
+    const ev = lastUndoable(state.events);
     if (!ev) return;
     dispatch({ type: 'UNDO' });
     sync.enqueue({ k: 'void', id: ev.id, voided: true });
@@ -123,12 +132,13 @@ function Live({ data, api, onExit }) {
 
       <div className="board">
         <Score label={match.team_name} value={score.home} />
-        <div className="qtr">Q{q}</div>
+        <div className="qtr"><span>Q{q}</span><b>{fmtClock(pt.quarters[q] || 0)}</b></div>
         <Score label={match.opponent_name} value={score.opp} />
       </div>
 
       <div className="bar">
-        <button onClick={undo} disabled={!liveEvents(state.events).length}>Undo</button>
+        <button className={`clockbtn${running ? ' on' : ''}`} onClick={toggleClock}>{running ? 'Pause clock' : 'Start clock'}</button>
+        <button onClick={undo} disabled={!lastUndoable(state.events)}>Undo</button>
         <button onClick={redo} disabled={!state.redo.length}>Redo</button>
         <button onClick={() => setSubOut(null)}>Sub</button>
         <button onClick={endQuarter}>End Q{q}</button>
@@ -140,6 +150,7 @@ function Live({ data, api, onExit }) {
           <button key={p.id} className={`player${picked === p.id ? ' sel' : ''}`} onClick={() => choose(p.id)}>
             <span className="pname">{p.name}</span>
             <span className="mini">{stats[p.id].PTS} pts, {stats[p.id].PF} fouls</span>
+            <span className="mini">{fmtClock(pt.seconds[p.id])} played</span>
           </button>
         ))}
       </section>
@@ -187,7 +198,7 @@ function Live({ data, api, onExit }) {
         <div className="overlay">
           <div className="modal wide">
             <strong>End of Q{breakQ}: {match.team_name} {score.home}, {match.opponent_name} {score.opp}</strong>
-            <BoxScore roster={roster} events={state.events} quarter={breakQ} />
+            <BoxScore roster={roster} events={state.events} quarter={breakQ} starters={match.starters} />
             <button className="btn btn-primary" onClick={() => { setLineup({ quarter: breakQ + 1, sel: ids }); setBreakQ(null); }}>Next: who plays Q{breakQ + 1}?</button>
           </div>
         </div>

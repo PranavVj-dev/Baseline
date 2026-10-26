@@ -72,7 +72,7 @@ function cleanEvent(b, teamId) {
     case 'ACTION': return ACTION_KEYS.includes(b.action) && inTeam(b.playerId) ? { ...base, playerId: b.playerId, action: b.action } : null;
     case 'SUB': return inTeam(b.out) && inTeam(b.in) ? { ...base, out: b.out, in: b.in } : null;
     case 'OPP': return [1, 2, 3].includes(b.pts) ? { ...base, pts: b.pts } : null;
-    case 'END_Q': return base;
+    case 'END_Q': case 'CLOCK_START': case 'CLOCK_PAUSE': return base;
     default: return null;
   }
 }

@@ -71,7 +71,7 @@ export default function MatchDetail({ matchId, onBack, onEnter }) {
         </div>
       )}
       {['completed', 'abandoned'].includes(m.status) && played.length > 0 && (
-        <section className="stack-s"><h3>Box score</h3><BoxScore roster={played} events={events} /></section>
+        <section className="stack-s"><h3>Box score</h3><BoxScore roster={played} events={events} starters={m.starters} /></section>
       )}
     </div>
   );

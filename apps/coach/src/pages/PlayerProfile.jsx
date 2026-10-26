@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLoad } from '@baseline/ui';
+import { fmtClock } from '@baseline/shared';
 
 const v = (x, suffix = '') => (x == null ? '–' : `${x}${suffix}`);
 const Stat = ({ label, value }) => <div className="stat"><b>{value}</b><span>{label}</span></div>;
@@ -43,6 +44,7 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
         </div>
         <div className="stat-grid">
           <Stat label="Games" value={c.games} />
+          <Stat label="Minutes / game" value={v(c.mpg)} />
           <Stat label="Points / game" value={v(c.ppg)} />
           <Stat label="Rebounds / game" value={v(c.rpg)} />
           <Stat label="Assists / game" value={v(c.apg)} />
@@ -66,7 +68,7 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
         {d.matches.length === 0 ? <p className="muted">No completed matches yet.</p> : (
           <div className="scroll">
             <table>
-              <thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>PF</th></tr></thead>
+              <thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>MIN</th><th>PTS</th><th>REB</th><th>AST</th><th>STL</th><th>BLK</th><th>PF</th></tr></thead>
               <tbody>
                 {d.matches.map((m) => {
                   const r = m.result.home > m.result.opp ? 'W' : m.result.home < m.result.opp ? 'L' : 'D';
@@ -74,7 +76,7 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
                     <tr key={m.match_id} className={`rowlink${m.counted ? '' : ' dim'}`} onClick={() => onOpenMatch?.(m.match_id)}>
                       <td>{new Date(m.date).toLocaleDateString([], { dateStyle: 'medium' })}</td>
                       <td>{m.opponent} <span className="badge">{m.kind}</span>{!m.counted && <span className="badge"> not counted</span>}</td>
-                      <td>{r} {m.result.home}-{m.result.opp}</td>
+                      <td>{r} {m.result.home}-{m.result.opp}</td><td>{m.min ? fmtClock(m.min) : '–'}</td>
                       <td>{m.stats.PTS}</td><td>{m.stats.REB}</td><td>{m.stats.AST}</td><td>{m.stats.STEAL}</td><td>{m.stats.BLOCK}</td><td>{m.stats.PF}</td>
                     </tr>
                   );

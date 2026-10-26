@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { scoreFromEvents, derive, quarterOf, onCourtIds, liveEvents } from '@baseline/shared';
+import { scoreFromEvents, derive, quarterOf, onCourtIds, liveEvents, playingTime } from '@baseline/shared';
 import { db } from './db.js';
 import { optionalAuth } from './auth.js';
 import { COLS, shape, eventsOf } from './matches.js';
@@ -55,9 +55,10 @@ publicApi.get('/matches/:id', (req, res) => {
   }
   if (['completed', 'abandoned'].includes(m.status)) {
     const live = liveEvents(events);
+    const pt = playingTime(state);
     out.box = names
       .filter((p) => m.starters.includes(p.id) || live.some((e) => e.playerId === p.id || e.in === p.id))
-      .map((p) => ({ id: p.id, name: p.name, s: stats[p.id] }));
+      .map((p) => ({ id: p.id, name: p.name, s: stats[p.id], min: Math.round(pt.seconds[p.id] ?? 0) }));
   }
   res.json(out);
 });

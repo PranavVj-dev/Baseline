@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { SHOTS, ACTIONS, reducer, newId, liveEvents, quarterOf, onCourtIds, derive, scoreFromEvents, describe, lastUndoable, playingTime, fmtClock } from '@baseline/shared';
+import { SHOTS, ACTIONS, reducer, newId, liveEvents, quarterOf, onCourtIds, derive, scoreFromEvents, describe, lastUndoable, playingTime, fmtClock, substitutionLog } from '@baseline/shared';
 import { useAuth, useLoad } from '@baseline/ui';
 import { useSync, applyQueue, queueKey } from './useSync.js';
 import BoxScore from './BoxScore.jsx';
@@ -49,6 +49,7 @@ function Live({ data, api, onExit }) {
   const [toast, setToast] = useState(null);
   const [subOut, setSubOut] = useState(undefined); // undefined = closed, null = choosing who leaves
   const [breakQ, setBreakQ] = useState(null);
+  const [showSubs, setShowSubs] = useState(false);
   const [lineup, setLineup] = useState(null); // { quarter, sel } while choosing who plays the next quarter
   const [finishing, setFinishing] = useState(false);
   const assistTimer = useRef();
@@ -69,6 +70,10 @@ function Live({ data, api, onExit }) {
     return () => clearInterval(t);
   }, [running]);
   const pt = playingTime(state, running ? now : null);
+  const subs = substitutionLog(state);
+  const perQuarter = subs.reduce((a, s) => ({ ...a, [s.quarter]: (a[s.quarter] || 0) + 1 }), {});
+  const timesIn = (id) => subs.filter((s) => s.in === id).length;
+  const timesOut = (id) => subs.filter((s) => s.out === id).length;
 
   const flash = (text) => { setToast(text); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 4000); };
   const closeAssist = () => { clearTimeout(assistTimer.current); setAssist(null); };
@@ -141,6 +146,7 @@ function Live({ data, api, onExit }) {
         <button onClick={undo} disabled={!lastUndoable(state.events)}>Undo</button>
         <button onClick={redo} disabled={!state.redo.length}>Redo</button>
         <button onClick={() => setSubOut(null)}>Sub</button>
+        <button onClick={() => setShowSubs(true)}>Minutes and subs ({subs.length})</button>
         <button onClick={endQuarter}>End Q{q}</button>
         <span className="opp">Opponent {[1, 2, 3].map((n) => <button key={n} onClick={() => log({ type: 'OPP', pts: n })}>+{n}</button>)}</span>
       </div>
@@ -200,6 +206,45 @@ function Live({ data, api, onExit }) {
             <strong>End of Q{breakQ}: {match.team_name} {score.home}, {match.opponent_name} {score.opp}</strong>
             <BoxScore roster={roster} events={state.events} quarter={breakQ} starters={match.starters} />
             <button className="btn btn-primary" onClick={() => { setLineup({ quarter: breakQ + 1, sel: ids }); setBreakQ(null); }}>Next: who plays Q{breakQ + 1}?</button>
+          </div>
+        </div>
+      )}
+
+      {showSubs && (
+        <div className="overlay" onClick={() => setShowSubs(false)}>
+          <div className="modal wide" onClick={(e) => e.stopPropagation()}>
+            <div className="row between"><strong>Minutes and substitutions</strong><button className="btn-quiet btn-sm" onClick={() => setShowSubs(false)}>Close</button></div>
+            <p className="muted">
+              {subs.length} substitution{subs.length === 1 ? '' : 's'} so far
+              {subs.length > 0 && ` (${Object.entries(perQuarter).map(([k, n]) => `Q${k}: ${n}`).join(', ')})`}.
+              Times are approximate and follow the clock you run.
+            </p>
+            <div className="scroll">
+              <table>
+                <thead><tr><th>Player</th><th>Now</th><th>MIN</th><th>Times on</th><th>Times off</th></tr></thead>
+                <tbody>
+                  {[...roster].sort((a, b) => ids.includes(b.id) - ids.includes(a.id)).map((p) => (
+                    <tr key={p.id}>
+                      <td>{p.name}</td><td>{ids.includes(p.id) ? 'On court' : 'Bench'}</td>
+                      <td>{fmtClock(pt.seconds[p.id])}</td><td>{timesIn(p.id)}</td><td>{timesOut(p.id)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <strong>Substitution log</strong>
+            {subs.length === 0 ? <p className="muted">No substitutions yet.</p> : (
+              <div className="scroll">
+                <table>
+                  <thead><tr><th>Quarter</th><th>Clock</th><th>Came on</th><th>Went off</th></tr></thead>
+                  <tbody>
+                    {[...subs].reverse().map((s) => (
+                      <tr key={s.id}><td>Q{s.quarter}</td><td>{s.clock === 0 ? 'start' : fmtClock(s.clock)}</td><td>{byId(s.in).name}</td><td>{byId(s.out).name}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       )}

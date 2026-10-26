@@ -171,3 +171,22 @@ export function playingTime(state, now = null, onlyQuarter = null) {
   if (now != null) advance(now);
   return { seconds, quarters, running, quarter: q };
 }
+
+// Every substitution with the quarter and the quarter-clock time it happened at (approximate, like playing time).
+// Changes made at the start of a quarter show 00:00.
+export function substitutionLog(state) {
+  const out = [];
+  const quarters = {};
+  let running = false;
+  let last = null;
+  let q = 1;
+  liveEvents(state.events).forEach((e) => {
+    if (running && last != null) quarters[q] = (quarters[q] || 0) + Math.max(0, e.ts - last) / 1000;
+    last = e.ts;
+    if (e.type === 'CLOCK_START') running = true;
+    else if (e.type === 'CLOCK_PAUSE') running = false;
+    else if (e.type === 'END_Q') { running = false; q += 1; }
+    else if (e.type === 'SUB') out.push({ id: e.id, quarter: q, clock: quarters[q] || 0, out: e.out, in: e.in });
+  });
+  return out;
+}

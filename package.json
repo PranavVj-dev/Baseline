@@ -2,14 +2,22 @@
   "name": "baseline",
   "private": true,
   "version": "0.2.0",
-  "workspaces": ["server", "packages/*", "apps/*"],
-  "engines": { "node": ">=22.13" },
+  "workspaces": [
+    "server",
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently -n server,coach,trainer -c blue,green,magenta \"npm run dev -w server\" \"npm run dev -w apps/coach\" \"npm run dev -w apps/trainer\"",
     "server": "npm run dev -w server",
     "coach": "npm run dev -w apps/coach",
     "trainer": "npm run dev -w apps/trainer",
-    "seed": "npm run seed -w server"
+    "seed": "npm run seed -w server",
+    "build": "npm run build -w apps/coach",
+    "start": "npm run start -w server"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",

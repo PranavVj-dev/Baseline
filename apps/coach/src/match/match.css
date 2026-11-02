@@ -61,3 +61,11 @@
 .qtr b { font-size: 1.5rem; font-variant-numeric: tabular-nums; color: var(--led); }
 .bar .clockbtn { background: var(--ok); border-color: var(--ok); box-shadow: 0 3px 0 #0f4a2d; color: #fff; }
 .bar .clockbtn.on { background: #fff; color: var(--bad); border: 2px solid var(--bad); box-shadow: 0 3px 0 #e6b8b0; }
+
+/* Assist prompt: bigger, stays until the next play, and pulses so it is noticed */
+.assist { padding: 14px; gap: 10px; border: 3px solid var(--led); animation: pulse 1.2s ease-in-out 3; }
+.assist strong { font-size: 1.2rem; }
+.assist .sub { font-size: .85rem; color: #b9c9d9; }
+.assist .names button { min-height: 62px; font-size: 1.15rem; }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255, 176, 32, .7); } 50% { box-shadow: 0 0 0 12px rgba(255, 176, 32, 0); } }
+@media (prefers-reduced-motion: reduce) { .assist { animation: none; } }

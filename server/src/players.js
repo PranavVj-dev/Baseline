@@ -9,45 +9,48 @@ export const players = Router();
 players.use(requireAuth);
 
 const fail = (res, status, error) => res.status(status).json({ error });
+const num = (v) => { const n = Number(v); return Number.isInteger(n) ? n : -1; };
 const newCode = () => crypto.randomBytes(6).toString('base64url');
-const staffOf = (uid, pid) => !!db.prepare('SELECT 1 FROM team_players tp JOIN memberships m ON m.team_id = tp.team_id WHERE tp.player_id = ? AND m.user_id = ?').get(pid, uid);
-const linked = (uid, pid) => !!db.prepare('SELECT 1 FROM player_links WHERE user_id = ? AND player_id = ?').get(uid, pid);
-const teamsOf = (pid) => db.prepare(`SELECT t.id, t.name, tp.start_date, tp.end_date FROM team_players tp
-  JOIN teams t ON t.id = tp.team_id WHERE tp.player_id = ? ORDER BY tp.start_date`).all(pid);
+const staffOf = async (uid, pid) => !!(await db.get('SELECT 1 AS x FROM team_players tp JOIN memberships m ON m.team_id = tp.team_id WHERE tp.player_id = ? AND m.user_id = ?', pid, uid));
+const linked = async (uid, pid) => !!(await db.get('SELECT 1 AS x FROM player_links WHERE user_id = ? AND player_id = ?', uid, pid));
+const teamsOf = (pid) => db.all(`SELECT t.id, t.name, tp.start_date, tp.end_date FROM team_players tp
+  JOIN teams t ON t.id = tp.team_id WHERE tp.player_id = ? ORDER BY tp.start_date`, pid);
 
-players.get('/mine', requireRole('viewer'), (req, res) => {
-  const rows = db.prepare('SELECT p.id, p.name, l.relation FROM player_links l JOIN players p ON p.id = l.player_id WHERE l.user_id = ? ORDER BY p.name').all(req.user.id);
-  res.json({ players: rows.map((p) => ({ ...p, teams: teamsOf(p.id).filter((t) => !t.end_date).map((t) => t.name) })) });
+players.get('/mine', requireRole('viewer'), async (req, res) => {
+  const rows = await db.all('SELECT p.id, p.name, l.relation FROM player_links l JOIN players p ON p.id = l.player_id WHERE l.user_id = ? ORDER BY p.name', req.user.id);
+  const out = [];
+  for (const p of rows) out.push({ ...p, teams: (await teamsOf(p.id)).filter((t) => !t.end_date).map((t) => t.name) });
+  res.json({ players: out });
 });
 
-players.post('/claim', requireRole('viewer'), (req, res) => {
+players.post('/claim', requireRole('viewer'), async (req, res) => {
   const code = String(req.body?.code ?? '').trim();
   const relation = req.body?.relation;
   if (!['player', 'parent'].includes(relation)) return fail(res, 400, 'Say whether you are the player or a parent or guardian');
-  const p = code ? db.prepare('SELECT id, name FROM players WHERE claim_code = ?').get(code) : null;
+  const p = code ? await db.get('SELECT id, name FROM players WHERE claim_code = ?', code) : null;
   if (!p) return fail(res, 404, 'That claim code was not found. Ask the coach for a new one.');
-  db.prepare('INSERT OR IGNORE INTO player_links (user_id, player_id, relation) VALUES (?, ?, ?)').run(req.user.id, p.id, relation);
+  await db.run('INSERT INTO player_links (user_id, player_id, relation) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', req.user.id, p.id, relation);
   res.json({ player: p });
 });
 
-const needStaff = (req, res, next) => (staffOf(req.user.id, Number(req.params.pid)) ? next() : fail(res, 403, 'Only staff of this player\'s team can do this'));
-const ensureCode = (pid) => {
-  let c = db.prepare('SELECT claim_code FROM players WHERE id = ?').get(pid)?.claim_code;
-  if (!c) { c = newCode(); db.prepare('UPDATE players SET claim_code = ? WHERE id = ?').run(c, pid); }
+const needStaff = async (req, res, next) => ((await staffOf(req.user.id, num(req.params.pid))) ? next() : fail(res, 403, 'Only staff of this player\'s team can do this'));
+const ensureCode = async (pid) => {
+  let c = (await db.get('SELECT claim_code FROM players WHERE id = ?', pid))?.claim_code;
+  if (!c) { c = newCode(); await db.run('UPDATE players SET claim_code = ? WHERE id = ?', c, pid); }
   return c;
 };
-const linksOf = (pid) => db.prepare('SELECT u.id AS user_id, u.name, l.relation FROM player_links l JOIN users u ON u.id = l.user_id WHERE l.player_id = ?').all(pid);
+const linksOf = (pid) => db.all('SELECT u.id AS user_id, u.name, l.relation FROM player_links l JOIN users u ON u.id = l.user_id WHERE l.player_id = ?', pid);
 
-players.get('/:pid/access', needStaff, (req, res) => {
-  const pid = Number(req.params.pid);
-  res.json({ code: ensureCode(pid), links: linksOf(pid) });
+players.get('/:pid/access', needStaff, async (req, res) => {
+  const pid = num(req.params.pid);
+  res.json({ code: await ensureCode(pid), links: await linksOf(pid) });
 });
-players.post('/:pid/access/regenerate', needStaff, (req, res) => {
-  db.prepare('UPDATE players SET claim_code = ? WHERE id = ?').run(newCode(), Number(req.params.pid));
+players.post('/:pid/access/regenerate', needStaff, async (req, res) => {
+  await db.run('UPDATE players SET claim_code = ? WHERE id = ?', newCode(), num(req.params.pid));
   res.json({ ok: true });
 });
-players.delete('/:pid/links/:uid', needStaff, (req, res) => {
-  db.prepare('DELETE FROM player_links WHERE player_id = ? AND user_id = ?').run(Number(req.params.pid), Number(req.params.uid));
+players.delete('/:pid/links/:uid', needStaff, async (req, res) => {
+  await db.run('DELETE FROM player_links WHERE player_id = ? AND user_id = ?', num(req.params.pid), num(req.params.uid));
   res.json({ ok: true });
 });
 
@@ -67,22 +70,22 @@ function summarize(t, games) {
     ppg: avg(t.PTS), rpg: avg(t.REB), apg: avg(t.AST), spg: avg(t.STEAL), bpg: avg(t.BLOCK) };
 }
 
-players.get('/:pid/profile', (req, res) => {
-  const pid = Number(req.params.pid);
-  const staff = staffOf(req.user.id, pid);
-  if (!staff && !linked(req.user.id, pid)) return fail(res, 403, 'You do not have access to this profile');
-  const p = db.prepare('SELECT id, name, date_of_birth FROM players WHERE id = ?').get(pid);
+players.get('/:pid/profile', async (req, res) => {
+  const pid = num(req.params.pid);
+  const staff = await staffOf(req.user.id, pid);
+  if (!staff && !(await linked(req.user.id, pid))) return fail(res, 403, 'You do not have access to this profile');
+  const p = await db.get('SELECT id, name, date_of_birth FROM players WHERE id = ?', pid);
   if (!p) return fail(res, 404, 'Player not found');
   const official = req.query.scope === 'official';
 
   const list = [];
-  for (const { team_id } of db.prepare('SELECT DISTINCT team_id FROM team_players WHERE player_id = ?').all(pid)) {
-    const roster = db.prepare('SELECT player_id AS id FROM team_players WHERE team_id = ?').all(team_id);
-    const rows = db.prepare(`SELECT ${COLS} FROM matches m JOIN teams t ON t.id = m.team_id
-      WHERE m.team_id = ? AND m.status IN ('completed', 'abandoned')`).all(team_id);
+  for (const { team_id } of await db.all('SELECT DISTINCT team_id FROM team_players WHERE player_id = ?', pid)) {
+    const roster = await db.all('SELECT player_id AS id FROM team_players WHERE team_id = ?', team_id);
+    const rows = await db.all(`SELECT ${COLS} FROM matches m JOIN teams t ON t.id = m.team_id
+      WHERE m.team_id = ? AND m.status IN ('completed', 'abandoned')`, team_id);
     for (const row of rows) {
       const m = shape(row);
-      const events = eventsOf(m.id);
+      const events = await eventsOf(m.id);
       const played = m.starters.includes(pid) || events.some((e) => !e.voided && (e.playerId === pid || e.in === pid));
       if (!played) continue;
       const tracked = scoreFromEvents(events);
@@ -116,7 +119,7 @@ players.get('/:pid/profile', (req, res) => {
 
   res.json({
     player: { id: p.id, name: p.name, date_of_birth: staff ? p.date_of_birth : undefined },
-    teams: teamsOf(pid),
+    teams: await teamsOf(pid),
     scope: official ? 'official' : 'all',
     career: { ...summarize(total, counted.length), mpg: timed.length ? Math.round(timed.reduce((a, x) => a + x.min, 0) / timed.length / 6) / 10 : null },
     by_year: group('year', (x) => x.year),

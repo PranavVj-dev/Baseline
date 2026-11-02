@@ -1,9 +1,25 @@
 import { useState } from 'react';
 import { useLoad } from '@baseline/ui';
 import { fmtClock } from '@baseline/shared';
+import StatChart from './StatChart.jsx';
 
 const v = (x, suffix = '') => (x == null ? '–' : `${x}${suffix}`);
-const Stat = ({ label, value }) => <div className="stat"><b>{value}</b><span>{label}</span></div>;
+const Stat = ({ label, value, onClick }) => (onClick
+  ? <button className="stat tile" onClick={onClick} aria-label={`${label}: ${value}. Show graph`}><b>{value}</b><span>{label}</span><i>tap for graph</i></button>
+  : <div className="stat"><b>{value}</b><span>{label}</span></div>);
+
+const pctOf = (m, a) => (a ? Math.round((1000 * m) / a) / 10 : null);
+const METRICS = {
+  mpg: { label: 'Minutes', get: (m) => (m.min ? Math.round(m.min / 6) / 10 : null) },
+  ppg: { label: 'Points', get: (m) => m.stats.PTS },
+  rpg: { label: 'Rebounds', get: (m) => m.stats.REB },
+  apg: { label: 'Assists', get: (m) => m.stats.AST },
+  spg: { label: 'Steals', get: (m) => m.stats.STEAL },
+  bpg: { label: 'Blocks', get: (m) => m.stats.BLOCK },
+  fg: { label: 'Field goal %', unit: '%', get: (m) => pctOf(m.stats['2PT_M'] + m.stats.LAYUP_M + m.stats['3PT_M'], m.stats['2PT_A'] + m.stats.LAYUP_A + m.stats['3PT_A']) },
+  three: { label: '3-point %', unit: '%', get: (m) => pctOf(m.stats['3PT_M'], m.stats['3PT_A']) },
+  ft: { label: 'Free throw %', unit: '%', get: (m) => pctOf(m.stats.FT_M, m.stats.FT_A) },
+};
 
 function Summary({ rows, first }) {
   if (!rows.length) return <p className="muted">Nothing counted yet.</p>;
@@ -20,10 +36,12 @@ function Summary({ rows, first }) {
 // Used by staff (from the roster) and by linked player or parent accounts.
 export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
   const [scope, setScope] = useState('all');
+  const [graph, setGraph] = useState(null);
   const { data: d, error, loading } = useLoad(`/players/${playerId}/profile?scope=${scope}`);
   if (loading && !d) return <p className="muted">Loading…</p>;
   if (error) return <div className="stack-s"><p className="error">{error}</p>{onBack && <button className="btn btn-sm" onClick={onBack}>Back</button>}</div>;
   const c = d.career;
+  const series = d.matches.filter((m) => m.counted).slice().reverse(); // oldest first, for the graphs
   const current = d.teams.filter((t) => !t.end_date).map((t) => t.name).join(', ');
 
   return (
@@ -44,15 +62,15 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
         </div>
         <div className="stat-grid">
           <Stat label="Games" value={c.games} />
-          <Stat label="Minutes / game" value={v(c.mpg)} />
-          <Stat label="Points / game" value={v(c.ppg)} />
-          <Stat label="Rebounds / game" value={v(c.rpg)} />
-          <Stat label="Assists / game" value={v(c.apg)} />
-          <Stat label="Steals / game" value={v(c.spg)} />
-          <Stat label="Blocks / game" value={v(c.bpg)} />
-          <Stat label="FG%" value={v(c.fg_pct)} />
-          <Stat label="3P%" value={v(c.three_pct)} />
-          <Stat label="FT%" value={v(c.ft_pct)} />
+          <Stat label="Minutes / game" value={v(c.mpg)} onClick={() => setGraph('mpg')} />
+          <Stat label="Points / game" value={v(c.ppg)} onClick={() => setGraph('ppg')} />
+          <Stat label="Rebounds / game" value={v(c.rpg)} onClick={() => setGraph('rpg')} />
+          <Stat label="Assists / game" value={v(c.apg)} onClick={() => setGraph('apg')} />
+          <Stat label="Steals / game" value={v(c.spg)} onClick={() => setGraph('spg')} />
+          <Stat label="Blocks / game" value={v(c.bpg)} onClick={() => setGraph('bpg')} />
+          <Stat label="FG%" value={v(c.fg_pct)} onClick={() => setGraph('fg')} />
+          <Stat label="3P%" value={v(c.three_pct)} onClick={() => setGraph('three')} />
+          <Stat label="FT%" value={v(c.ft_pct)} onClick={() => setGraph('ft')} />
         </div>
         <p className="muted">
           Totals: {c.totals.PTS} points, {c.totals.REB} rebounds, {c.totals.AST} assists. Only completed matches marked to count towards career stats are included.
@@ -60,6 +78,7 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
         </p>
       </section>
 
+      {graph && <StatChart metric={METRICS[graph]} matches={series} onClose={() => setGraph(null)} />}
       <section className="stack-s"><h3>By academic year</h3><Summary rows={d.by_year} first="Year" /></section>
       <section className="stack-s"><h3>By team</h3><Summary rows={d.by_team} first="Team" /></section>
 

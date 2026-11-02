@@ -47,6 +47,7 @@ function Live({ data, api, onExit }) {
   const [picked, setPicked] = useState(null);
   const [assist, setAssist] = useState(null);
   const [toast, setToast] = useState(null);
+  const [lateAssist, setLateAssist] = useState(null); // {} = choosing a basket, { eventId } = choosing who assisted
   const [subOut, setSubOut] = useState(undefined); // undefined = closed, null = choosing who leaves
   const [breakQ, setBreakQ] = useState(null);
   const [showSubs, setShowSubs] = useState(false);
@@ -78,6 +79,7 @@ function Live({ data, api, onExit }) {
   const flash = (text) => { setToast(text); clearTimeout(toastTimer.current); toastTimer.current = setTimeout(() => setToast(null), 4000); };
   const closeAssist = () => { clearTimeout(assistTimer.current); setAssist(null); };
   const log = (event) => {
+    if (!String(event.type).startsWith('CLOCK')) closeAssist(); // the strip stays until the next play
     const ev = { id: newId(), ts: Date.now(), quarter: quarterOf(state.events), ...event };
     dispatch({ type: 'LOG', event: ev });
     sync.enqueue({ k: 'event', body: ev });
@@ -91,11 +93,13 @@ function Live({ data, api, onExit }) {
     closeAssist();
     if (made && shot !== 'FT') {
       setAssist({ eventId: id, scorer: picked });
-      assistTimer.current = setTimeout(() => setAssist(null), 5000);
+      navigator.vibrate?.(40); // a small buzz as a cue
     }
     setPicked(null);
   };
   const logAction = (action) => { log({ type: 'ACTION', playerId: picked, action }); closeAssist(); setPicked(null); };
+  const recentBaskets = liveEvents(state.events).filter((x) => x.type === 'SHOT' && x.made && x.shot !== 'FT').slice(-8).reverse();
+  const giveLateAssist = (by) => { dispatch({ type: 'ASSIST', eventId: lateAssist.eventId, by }); sync.enqueue({ k: 'assist', id: lateAssist.eventId, by }); setLateAssist(null); };
   const giveAssist = (by) => { dispatch({ type: 'ASSIST', eventId: assist.eventId, by }); sync.enqueue({ k: 'assist', id: assist.eventId, by }); closeAssist(); };
 
   const undo = () => {
@@ -147,6 +151,7 @@ function Live({ data, api, onExit }) {
         <button onClick={redo} disabled={!state.redo.length}>Redo</button>
         <button onClick={() => setSubOut(null)}>Sub</button>
         <button onClick={() => setShowSubs(true)}>Minutes and subs ({subs.length})</button>
+        <button onClick={() => setLateAssist({})}>Add assist</button>
         <button onClick={endQuarter}>End Q{q}</button>
         <span className="opp">Opponent {[1, 2, 3].map((n) => <button key={n} onClick={() => log({ type: 'OPP', pts: n })}>+{n}</button>)}</span>
       </div>
@@ -179,13 +184,13 @@ function Live({ data, api, onExit }) {
       )}
 
       {assist && (
-        <div className="assist" key={assist.eventId}>
-          <strong>Assist on {byId(assist.scorer).name}'s basket?</strong>
+        <div className="assist" key={assist.eventId} role="alertdialog" aria-label="Who assisted?">
+          <strong>Who assisted {byId(assist.scorer).name}'s basket?</strong>
+          <span className="sub">This stays here until your next play.</span>
           <div className="names">
             {court.filter((p) => p.id !== assist.scorer).map((p) => <button key={p.id} onClick={() => giveAssist(p.id)}>{p.name}</button>)}
             <button className="none" onClick={closeAssist}>No assist</button>
           </div>
-          <i className="timer" />
         </div>
       )}
 
@@ -206,6 +211,33 @@ function Live({ data, api, onExit }) {
             <strong>End of Q{breakQ}: {match.team_name} {score.home}, {match.opponent_name} {score.opp}</strong>
             <BoxScore roster={roster} events={state.events} quarter={breakQ} starters={match.starters} />
             <button className="btn btn-primary" onClick={() => { setLineup({ quarter: breakQ + 1, sel: ids }); setBreakQ(null); }}>Next: who plays Q{breakQ + 1}?</button>
+          </div>
+        </div>
+      )}
+
+      {lateAssist && (
+        <div className="overlay" onClick={() => setLateAssist(null)}>
+          <div className="modal" onClick={(ev) => ev.stopPropagation()}>
+            <div className="row between">
+              <strong>{lateAssist.eventId ? 'Who assisted?' : 'Add an assist to a recent basket'}</strong>
+              <button className="btn-quiet btn-sm" onClick={() => setLateAssist(null)}>Close</button>
+            </div>
+            {!lateAssist.eventId ? (
+              recentBaskets.length === 0 ? <p className="muted">No baskets yet.</p> : (
+                <div className="stack-s">
+                  {recentBaskets.map((x) => (
+                    <button key={x.id} onClick={() => setLateAssist({ eventId: x.id })}>
+                      {byId(x.playerId).name}, {x.shot} (Q{x.quarter}): {x.assistBy ? `assist by ${byId(x.assistBy).name}` : 'no assist yet'}
+                    </button>
+                  ))}
+                </div>
+              )
+            ) : (
+              <div className="picks">
+                {roster.filter((p) => p.id !== state.events.find((x) => x.id === lateAssist.eventId)?.playerId).map((p) => <button key={p.id} onClick={() => giveLateAssist(p.id)}>{p.name}</button>)}
+                <button onClick={() => giveLateAssist(null)}>No assist</button>
+              </div>
+            )}
           </div>
         </div>
       )}

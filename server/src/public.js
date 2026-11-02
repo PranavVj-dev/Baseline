@@ -8,12 +8,12 @@ import { COLS, shape, eventsOf } from './matches.js';
 export const publicApi = Router();
 publicApi.use(optionalAuth);
 
-const publicNames = (teamId) =>
-  db.prepare(`SELECT p.id, p.name, p.hide_name, MAX(tp.jersey_no) AS jersey_no FROM players p
-    JOIN team_players tp ON tp.player_id = p.id WHERE tp.team_id = ? GROUP BY p.id ORDER BY p.name`).all(teamId)
+const publicNames = async (teamId) =>
+  (await db.all(`SELECT p.id, p.name, p.hide_name, MAX(tp.jersey_no) AS jersey_no FROM players p
+    JOIN team_players tp ON tp.player_id = p.id WHERE tp.team_id = ? GROUP BY p.id ORDER BY p.name`, teamId))
     .map((p) => ({ id: p.id, name: p.hide_name ? `Player ${p.jersey_no != null ? `#${p.jersey_no}` : '(name hidden)'}` : p.name }));
 
-publicApi.get('/matches', (req, res) => {
+publicApi.get('/matches', async (req, res) => {
   let where = "m.status != 'cancelled'";
   const args = [];
   if (req.query.scope === 'following') {
@@ -21,22 +21,23 @@ publicApi.get('/matches', (req, res) => {
     where += ' AND m.team_id IN (SELECT team_id FROM follows WHERE user_id = ?)';
     args.push(req.user.id);
   }
-  const rows = db.prepare(`SELECT ${COLS} FROM matches m JOIN teams t ON t.id = m.team_id WHERE ${where}
-    ORDER BY COALESCE(m.scheduled_at, m.created_at) DESC LIMIT 100`).all(...args);
-  res.json({
-    matches: rows.map((r) => {
-      const { starters, ...m } = shape(r);
-      return { ...m, score: scoreFromEvents(eventsOf(m.id)) };
-    }),
-  });
+  const rows = await db.all(`SELECT ${COLS} FROM matches m JOIN teams t ON t.id = m.team_id WHERE ${where}
+    ORDER BY COALESCE(m.scheduled_at, m.created_at) DESC LIMIT 100`, ...args);
+  const out = [];
+  for (const r of rows) {
+    const { starters, ...m } = shape(r);
+    out.push({ ...m, score: scoreFromEvents(await eventsOf(m.id)) });
+  }
+  res.json({ matches: out });
 });
 
-publicApi.get('/matches/:id', (req, res) => {
-  const row = db.prepare(`SELECT ${COLS} FROM matches m JOIN teams t ON t.id = m.team_id WHERE m.id = ?`).get(Number(req.params.id));
+publicApi.get('/matches/:id', async (req, res) => {
+  const n = Number(req.params.id);
+  const row = Number.isInteger(n) ? await db.get(`SELECT ${COLS} FROM matches m JOIN teams t ON t.id = m.team_id WHERE m.id = ?`, n) : null;
   if (!row || row.status === 'cancelled') return res.status(404).json({ error: 'Match not found' });
   const m = shape(row);
-  const events = eventsOf(m.id);
-  const names = publicNames(m.team_id);
+  const events = await eventsOf(m.id);
+  const names = await publicNames(m.team_id);
   const state = { roster: names, events, starters: m.starters };
   const score = scoreFromEvents(events);
   const { starters, ...match } = m;
@@ -45,7 +46,7 @@ publicApi.get('/matches/:id', (req, res) => {
     score,
     quarter: quarterOf(events),
     review: m.final_home != null && (m.final_home !== score.home || m.final_opp !== score.opp),
-    following: req.user ? !!db.prepare('SELECT 1 FROM follows WHERE user_id = ? AND team_id = ?').get(req.user.id, m.team_id) : false,
+    following: req.user ? !!(await db.get('SELECT 1 AS x FROM follows WHERE user_id = ? AND team_id = ?', req.user.id, m.team_id)) : false,
   };
   const { stats } = derive(state);
   if (m.status === 'live') {

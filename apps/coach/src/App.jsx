@@ -14,14 +14,28 @@ import MatchEntry from './match/MatchEntry.jsx';
 // The same app serves both account types; the menu depends on the role chosen at sign-up.
 const NAV = {
   staff: [
-    { key: 'home', label: 'Home' },
-    { key: 'teams', label: 'Teams' },
-    { key: 'matches', label: 'Matches' },
+    { key: 'home', label: 'Home', hint: 'Where you start' },
+    { key: 'teams', label: 'Teams', hint: 'Players, profiles and stats' },
+    { key: 'matches', label: 'Matches', hint: 'Set up and record a match' },
   ],
   viewer: [
-    { key: 'matches', label: 'Matches' },
-    { key: 'following', label: 'Following' },
-    { key: 'profile', label: 'My profile' },
+    { key: 'matches', label: 'Matches', hint: 'Live scores and results' },
+    { key: 'following', label: 'Following', hint: 'Teams you follow' },
+    { key: 'profile', label: 'My profile', hint: 'Your player\u2019s stats' },
+  ],
+};
+const GUIDE = {
+  staff: [
+    { title: 'Teams', text: 'Your teams and players. Open a team, then tap Profile next to a player to see career stats, graphs and match history. Tap Access to give a parent a code to link their child.' },
+    { title: 'Matches', text: 'Set up a match, pick the starting five, then Start match to record it live. Finished matches show the box score.' },
+    { title: 'Recording a match', text: 'Tap a player, then the action. Use Undo if you slip. After a basket, tap who assisted. Use Add assist later if you missed it.' },
+    { title: 'Help', text: 'Tap Help at the top any time to see this again.' },
+  ],
+  viewer: [
+    { title: 'Matches', text: 'Watch live scores and read finished matches. Tap a match to open it.' },
+    { title: 'Following', text: 'Find a team by name and tap Follow to see its matches in one place.' },
+    { title: 'My profile', text: 'Enter the claim code from the coach to link your player. Then you can see career stats, graphs and each match.' },
+    { title: 'Help', text: 'Tap Help at the top any time to see this again.' },
   ],
 };
 const TAGLINE = 'Match records and player history for basketball, built for the grassroots game.';
@@ -94,7 +108,7 @@ export default function App() {
 
   const sub = pubId || playerId || matchId || teamId;
   return (
-    <AppShell appName="Baseline Coach" nav={nav} current={current} onNavigate={go}>
+    <AppShell appName="Baseline Coach" nav={nav} current={current} onNavigate={go} guide={GUIDE[user.role]}>
       {notice && <p className="notice">{notice} <button className="btn-quiet btn-sm" onClick={() => setNotice('')}>Dismiss</button></p>}
       {!sub && <h2>{nav.find((n) => n.key === current).label}</h2>}
       {body}

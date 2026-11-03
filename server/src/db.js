@@ -31,10 +31,18 @@ if (process.env.DATABASE_URL) {
   };
 } else {
   const { PGlite } = await import('@electric-sql/pglite');
+  const open = async (dir) => { const lite = new PGlite(dir); await lite.waitReady; return lite; };
   const dir = process.env.PGLITE_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'data', 'pgdata');
-  if (!dir.startsWith('memory:')) mkdirSync(path.dirname(dir), { recursive: true });
-  const lite = new PGlite(dir);
-  await lite.waitReady;
+  let lite;
+  try {
+    if (!dir.startsWith('memory:')) mkdirSync(path.dirname(dir), { recursive: true });
+    lite = await open(dir);
+  } catch (err) {
+    console.warn(`\nCould not open the local database at ${dir}\n(${err.message})`);
+    console.warn('Using a temporary in-memory database instead. Data will be lost when the server stops.');
+    console.warn('To keep data, set PGLITE_DIR to a folder path with no spaces, for example C:\\baseline-data\n');
+    lite = await open('memory://');
+  }
   run = (sql, params = []) => lite.query(toPg(sql), params);
   script = (sql) => lite.exec(sql);
   transaction = (fn) => lite.transaction((tx) => fn((sql, params = []) => tx.query(toPg(sql), params)));

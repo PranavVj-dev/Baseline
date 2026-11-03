@@ -21,6 +21,12 @@ npm run dev
 
 The database is Postgres. Locally it is stored in `server/data` and needs no installation, and demo accounts (`coach@demo.in`, `trainer@demo.in`, `parent@demo.in`, password `demo12345`) are created on start with a team called Explorers. Put real player names, one per line, in `server/data/roster.local.txt` before the first start (that folder is not committed). Delete `server/data/pgdata` to start again.
 
+### If `npm run dev` fails with a database error ("Aborted()")
+The hosted version is not affected. Locally, try these in order (Command Prompt, in the project folder):
+1. `npm install`, then `npm run dev` (the database engine was upgraded).
+2. `set PGLITE_DIR=C:\baseline-data` then `npm run dev` (a folder path with no spaces).
+3. `set PGLITE_DIR=memory://` then `npm run dev` (nothing is saved between runs, but demo data is recreated each start).
+
 ## Put it online
 
 See `DEPLOY.md`. The server also serves the built Coach app, so one address does everything, and the Coach app installs to a phone's home screen.

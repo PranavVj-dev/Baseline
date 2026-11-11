@@ -34,6 +34,7 @@ export default function PublicMatch({ matchId, onBack }) {
         <div className="row">
           <span className={`badge${live ? ' status-live' : ''}`}>{m.status}</span>
           <span className="badge">{m.kind}</span>
+          <span className="badge">{m.format === '3v3' ? '3 on 3' : '5 on 5'}</span>
         </div>
       </div>
 

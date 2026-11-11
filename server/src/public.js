@@ -26,7 +26,7 @@ publicApi.get('/matches', async (req, res) => {
   const out = [];
   for (const r of rows) {
     const { starters, ...m } = shape(r);
-    out.push({ ...m, score: scoreFromEvents(await eventsOf(m.id)) });
+    out.push({ ...m, score: scoreFromEvents(await eventsOf(m.id), m.format) });
   }
   res.json({ matches: out });
 });
@@ -38,8 +38,8 @@ publicApi.get('/matches/:id', async (req, res) => {
   const m = shape(row);
   const events = await eventsOf(m.id);
   const names = await publicNames(m.team_id);
-  const state = { roster: names, events, starters: m.starters };
-  const score = scoreFromEvents(events);
+  const state = { roster: names, events, starters: m.starters, format: m.format };
+  const score = scoreFromEvents(events, m.format);
   const { starters, ...match } = m;
   const out = {
     match,

@@ -77,6 +77,7 @@ players.get('/:pid/profile', async (req, res) => {
   const p = await db.get('SELECT id, name, date_of_birth FROM players WHERE id = ?', pid);
   if (!p) return fail(res, 404, 'Player not found');
   const official = req.query.scope === 'official';
+  const fmt = ['5v5', '3v3'].includes(req.query.format) ? req.query.format : null; // optional filter, points differ between types
 
   const list = [];
   for (const { team_id } of await db.all('SELECT DISTINCT team_id FROM team_players WHERE player_id = ?', pid)) {
@@ -88,14 +89,14 @@ players.get('/:pid/profile', async (req, res) => {
       const events = await eventsOf(m.id);
       const played = m.starters.includes(pid) || events.some((e) => !e.voided && (e.playerId === pid || e.in === pid));
       if (!played) continue;
-      const tracked = scoreFromEvents(events);
+      const tracked = scoreFromEvents(events, m.format);
       const d = dateOf(m);
       list.push({
         match_id: m.id, date: d.toISOString(), year: yearOf(d), team_id, team_name: m.team_name, opponent: m.opponent_name,
-        kind: m.kind, status: m.status,
-        counted: m.status === 'completed' && m.counts_for_career && (!official || m.kind === 'official'),
+        kind: m.kind, status: m.status, format: m.format,
+        counted: m.status === 'completed' && m.counts_for_career && (!official || m.kind === 'official') && (!fmt || m.format === fmt),
         result: m.final_home != null ? { home: m.final_home, opp: m.final_opp } : tracked,
-        stats: derive({ roster, events }).stats[pid],
+        stats: derive({ roster, events, format: m.format }).stats[pid],
         min: Math.round(playingTime({ roster, events, starters: m.starters }).seconds[pid] ?? 0),
       });
     }

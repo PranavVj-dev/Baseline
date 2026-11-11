@@ -137,6 +137,7 @@ const MIGRATIONS = [
      created_at TEXT NOT NULL DEFAULT (${NOW}),
      PRIMARY KEY (user_id, player_id)
    )`,
+  `ALTER TABLE matches ADD COLUMN format TEXT NOT NULL DEFAULT '5v5' CHECK (format IN ('5v5', '3v3'))`,
 ];
 
 await script('CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY)');

@@ -23,9 +23,9 @@ export function BoxTable({ rows }) {
 }
 
 // Player stats for one quarter or the whole game, worked out from the event log.
-export default function BoxScore({ roster, events, quarter, starters }) {
+export default function BoxScore({ roster, events, quarter, starters, format }) {
   const [scope, setScope] = useState(quarter ? 'quarter' : 'game');
-  const { stats } = derive({ roster, events }, scope === 'quarter' ? quarter : undefined);
+  const { stats } = derive({ roster, events, format }, scope === 'quarter' ? quarter : undefined);
   const pt = starters ? playingTime({ roster, events, starters }, null, scope === 'quarter' ? quarter : null) : null;
   return (
     <div className="stack-s">

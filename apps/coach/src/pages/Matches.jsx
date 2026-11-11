@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth, useLoad } from '@baseline/ui';
+import { MATCH_FORMATS } from '@baseline/shared';
 
 export const when = (iso) => (iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'No date set');
 
@@ -14,6 +15,7 @@ export function MatchCard({ m, onOpen }) {
         <span className="row">
           <span className={`badge${m.status === 'live' ? ' status-live' : ''}`}>{m.status}</span>
           <span className="badge">{m.kind}</span>
+          <span className="badge">{MATCH_FORMATS[m.format]?.label ?? '5 on 5'}</span>
         </span>
       </button>
     </li>
@@ -23,7 +25,7 @@ export function MatchCard({ m, onOpen }) {
 function NewMatch({ onCreated, onCancel }) {
   const { api } = useAuth();
   const { data } = useLoad('/teams/mine');
-  const [form, setForm] = useState({ team_id: '', opponent_name: '', scheduled_at: '', venue: '', counts_for_career: true });
+  const [form, setForm] = useState({ team_id: '', opponent_name: '', scheduled_at: '', venue: '', counts_for_career: true, format: '5v5' });
   const [err, setErr] = useState('');
   const set = (k) => (e) => setForm({ ...form, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const teams = data?.teams ?? [];
@@ -47,6 +49,15 @@ function NewMatch({ onCreated, onCancel }) {
         <label className="field">Opponent<input value={form.opponent_name} onChange={set('opponent_name')} placeholder="Team name" required /></label>
         <label className="field">Date and time<input type="datetime-local" value={form.scheduled_at} onChange={set('scheduled_at')} /></label>
         <label className="field">Venue (optional)<input value={form.venue} onChange={set('venue')} /></label>
+      </div>
+      <div className="stack-s">
+        <strong>Match type</strong>
+        <div className="seg">
+          {Object.entries(MATCH_FORMATS).map(([k, f]) => (
+            <button type="button" key={k} className={form.format === k ? 'on' : ''} onClick={() => setForm({ ...form, format: k })}>{f.label}</button>
+          ))}
+        </div>
+        <span className="muted">{form.format === '3v3' ? '3 on 3: you pick three starters. A shot inside the arc scores 1 and beyond the arc scores 2.' : '5 on 5: you pick five starters. Shots score 2 or 3.'}</span>
       </div>
       <label className="row">
         <input type="checkbox" checked={form.counts_for_career} onChange={set('counts_for_career')} />

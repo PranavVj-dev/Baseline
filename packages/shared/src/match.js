@@ -92,10 +92,9 @@ export function derive(state, quarter) {
     if (quarter && e.quarter !== quarter) return;
     const s = stats[e.playerId];
     if (e.type === 'SHOT') {
-      const shot = SHOTS.find((x) => x.key === e.shot);
       if (s) {
         s[`${e.shot}_A`] += 1;
-        if (e.made) { s[`${e.shot}_M`] += 1; s.PTS += shot.pts; }
+        if (e.made) { s[`${e.shot}_M`] += 1; s.PTS += shotPts(state.format, e.shot); }
       }
       if (e.assistBy && stats[e.assistBy]) stats[e.assistBy].AST += 1;
     } else if (e.type === 'ACTION' && s) {
@@ -125,11 +124,11 @@ export function describe(e, roster) {
 }
 
 // Score from an event list (used by the server and the apps so they always agree).
-export function scoreFromEvents(events) {
+export function scoreFromEvents(events, format) {
   let home = 0;
   let opp = 0;
   liveEvents(events).forEach((e) => {
-    if (e.type === 'SHOT' && e.made) home += SHOTS.find((s) => s.key === e.shot)?.pts ?? 0;
+    if (e.type === 'SHOT' && e.made) home += shotPts(format, e.shot) ?? 0;
     else if (e.type === 'OPP') opp += e.pts;
   });
   return { home, opp };
@@ -190,3 +189,13 @@ export function substitutionLog(state) {
   });
   return out;
 }
+
+// Match types. 3 on 3 follows FIBA 3x3 scoring: a shot inside the arc is 1 point, beyond the arc is 2, a free throw is 1.
+// To change the points or the number of players, edit this table.
+export const MATCH_FORMATS = {
+  '5v5': { label: '5 on 5', onCourt: 5, pts: { '2PT': 2, LAYUP: 2, '3PT': 3, FT: 1 }, labels: {} },
+  '3v3': { label: '3 on 3', onCourt: 3, pts: { '2PT': 1, LAYUP: 1, '3PT': 2, FT: 1 },
+    labels: { '2PT': 'Inside arc (1)', LAYUP: 'Lay-up (1)', '3PT': 'Beyond arc (2)', FT: 'Free throw (1)' } },
+};
+export const shotPts = (format, key) => (MATCH_FORMATS[format] ?? MATCH_FORMATS['5v5']).pts[key];
+export const shotsFor = (format) => SHOTS.map((s) => ({ ...s, pts: shotPts(format, s.key), label: (MATCH_FORMATS[format] ?? MATCH_FORMATS['5v5']).labels[s.key] ?? s.label }));

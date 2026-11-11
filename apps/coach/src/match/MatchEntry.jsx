@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react';
-import { SHOTS, ACTIONS, reducer, newId, liveEvents, quarterOf, onCourtIds, derive, scoreFromEvents, describe, lastUndoable, playingTime, fmtClock, substitutionLog } from '@baseline/shared';
+import { MATCH_FORMATS, shotsFor, ACTIONS, reducer, newId, liveEvents, quarterOf, onCourtIds, derive, scoreFromEvents, describe, lastUndoable, playingTime, fmtClock, substitutionLog } from '@baseline/shared';
 import { useAuth, useLoad } from '@baseline/ui';
 import { useSync, applyQueue, queueKey } from './useSync.js';
 import BoxScore from './BoxScore.jsx';
@@ -41,7 +41,7 @@ function Live({ data, api, onExit }) {
   const { match, roster } = data;
   const sync = useSync(match.id, api);
   const [state, dispatch] = useReducer(reducer, null, () => ({
-    roster, starters: match.starters, ready: true, redo: [],
+    roster, starters: match.starters, format: match.format, ready: true, redo: [],
     events: applyQueue(data.events, JSON.parse(localStorage.getItem(queueKey(match.id)) || '[]')),
   }));
   const [picked, setPicked] = useState(null);
@@ -56,12 +56,14 @@ function Live({ data, api, onExit }) {
   const assistTimer = useRef();
   const toastTimer = useRef();
 
+  const N = MATCH_FORMATS[match.format].onCourt; // players on court: 5, or 3 in a 3 on 3 match
+  const word = N === 3 ? 'three' : 'five';
   const ids = onCourtIds(state);
   const byId = (id) => roster.find((p) => p.id === id);
   const court = ids.map(byId);
   const bench = roster.filter((p) => !ids.includes(p.id));
   const { stats } = derive(state);
-  const score = scoreFromEvents(state.events);
+  const score = scoreFromEvents(state.events, match.format);
   const q = quarterOf(state.events);
   const running = playingTime(state).running;
   const [now, setNow] = useState(() => Date.now());
@@ -127,7 +129,7 @@ function Live({ data, api, onExit }) {
     outs.forEach((out, i) => log({ type: 'SUB', out, in: ins[i] }));
     setLineup(null);
   };
-  const pickForQuarter = (id) => setLineup((l) => ({ ...l, sel: l.sel.includes(id) ? l.sel.filter((x) => x !== id) : l.sel.length < 5 ? [...l.sel, id] : l.sel }));
+  const pickForQuarter = (id) => setLineup((l) => ({ ...l, sel: l.sel.includes(id) ? l.sel.filter((x) => x !== id) : l.sel.length < N ? [...l.sel, id] : l.sel }));
 
   return (
     <div className="entry">
@@ -153,10 +155,10 @@ function Live({ data, api, onExit }) {
         <button onClick={() => setShowSubs(true)}>Minutes and subs ({subs.length})</button>
         <button onClick={() => setLateAssist({})}>Add assist</button>
         <button onClick={endQuarter}>End Q{q}</button>
-        <span className="opp">Opponent {[1, 2, 3].map((n) => <button key={n} onClick={() => log({ type: 'OPP', pts: n })}>+{n}</button>)}</span>
+        <span className="opp">Opponent {(N === 3 ? [1, 2] : [1, 2, 3]).map((n) => <button key={n} onClick={() => log({ type: 'OPP', pts: n })}>+{n}</button>)}</span>
       </div>
 
-      <section className="players">
+      <section className={`players${N === 3 ? ' n3' : ''}`}>
         {court.map((p) => (
           <button key={p.id} className={`player${picked === p.id ? ' sel' : ''}`} onClick={() => choose(p.id)}>
             <span className="pname">{p.name}</span>
@@ -171,7 +173,7 @@ function Live({ data, api, onExit }) {
           <div className="scrim" onClick={() => setPicked(null)} />
           <div className="panel" role="dialog" aria-label="Actions">
             <div className="panel-head"><strong>{byId(picked).name}</strong><button className="btn-quiet btn-sm" onClick={() => setPicked(null)}>Close</button></div>
-            {SHOTS.map((s) => (
+            {shotsFor(match.format).map((s) => (
               <div className="shotrow" key={s.key}>
                 <span>{s.label}</span>
                 <button className="made" onClick={() => logShot(s.key, true)}>Made</button>
@@ -209,7 +211,7 @@ function Live({ data, api, onExit }) {
         <div className="overlay">
           <div className="modal wide">
             <strong>End of Q{breakQ}: {match.team_name} {score.home}, {match.opponent_name} {score.opp}</strong>
-            <BoxScore roster={roster} events={state.events} quarter={breakQ} starters={match.starters} />
+            <BoxScore roster={roster} events={state.events} quarter={breakQ} starters={match.starters} format={match.format} />
             <button className="btn btn-primary" onClick={() => { setLineup({ quarter: breakQ + 1, sel: ids }); setBreakQ(null); }}>Next: who plays Q{breakQ + 1}?</button>
           </div>
         </div>
@@ -285,16 +287,16 @@ function Live({ data, api, onExit }) {
         <div className="overlay">
           <div className="modal">
             <strong>Who plays Q{lineup.quarter}?</strong>
-            <span className="muted">The five who were on court are already selected. Tap to change, and pick exactly five.</span>
+            <span className="muted">{`The ${word} who were on court are already selected. Tap to change, and pick exactly ${word}.`}</span>
             <div className="picks">
               {roster.map((p) => <button key={p.id} aria-pressed={lineup.sel.includes(p.id)} onClick={() => pickForQuarter(p.id)}>{p.name}</button>)}
             </div>
             <p className="muted">
-              {lineup.sel.length !== 5 ? `${lineup.sel.length} of 5 picked`
-                : ids.every((id) => lineup.sel.includes(id)) ? 'No changes: same five as before.'
+              {lineup.sel.length !== N ? `${lineup.sel.length} of ${N} picked`
+                : ids.every((id) => lineup.sel.includes(id)) ? `No changes: same ${word} as before.`
                 : `Off: ${ids.filter((id) => !lineup.sel.includes(id)).map((id) => byId(id).name).join(', ')}. On: ${lineup.sel.filter((id) => !ids.includes(id)).map((id) => byId(id).name).join(', ')}.`}
             </p>
-            <button className="btn btn-primary" disabled={lineup.sel.length !== 5} onClick={startQuarter}>Start Q{lineup.quarter}</button>
+            <button className="btn btn-primary" disabled={lineup.sel.length !== N} onClick={startQuarter}>Start Q{lineup.quarter}</button>
           </div>
         </div>
       )}

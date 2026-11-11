@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { SHOTS, ACTIONS, scoreFromEvents } from '@baseline/shared';
+import { SHOTS, ACTIONS, MATCH_FORMATS, scoreFromEvents } from '@baseline/shared';
 import { db, NOW } from './db.js';
 import { requireAuth, requireRole } from './auth.js';
 
@@ -11,7 +11,7 @@ const num = (v) => { const n = Number(v); return Number.isInteger(n) ? n : -1; }
 const isMember = async (teamId, userId) => !!(await db.get('SELECT 1 AS x FROM memberships WHERE team_id = ? AND user_id = ?', teamId, userId));
 const toEvent = (r) => ({ ...JSON.parse(r.data), id: r.id, voided: !!r.voided, assistBy: r.assist_by ?? undefined });
 const eventsOf = async (id) => (await db.all('SELECT * FROM match_events WHERE match_id = ? ORDER BY seq', id)).map(toEvent);
-const COLS = `m.id, m.team_id, t.name AS team_name, m.opponent_name, m.kind, m.status, m.scheduled_at, m.venue,
+const COLS = `m.id, m.format, m.team_id, t.name AS team_name, m.opponent_name, m.kind, m.status, m.scheduled_at, m.venue,
   m.counts_for_career, m.starters, m.final_home, m.final_opp, m.started_at, m.ended_at`;
 const shape = (m) => ({ ...m, counts_for_career: !!m.counts_for_career, starters: m.starters ? JSON.parse(m.starters) : [] });
 const activeRoster = async (teamId) => (await db.all('SELECT player_id FROM team_players WHERE team_id = ? AND end_date IS NULL', teamId)).map((r) => r.player_id);
@@ -21,7 +21,7 @@ matches.get('/', requireRole('staff'), async (req, res) => {
     JOIN memberships ms ON ms.team_id = t.id AND ms.user_id = ?
     ORDER BY COALESCE(m.scheduled_at, m.created_at) DESC`, req.user.id);
   const out = [];
-  for (const r of rows) out.push({ ...shape(r), score: scoreFromEvents(await eventsOf(r.id)) });
+  for (const r of rows) out.push({ ...shape(r), score: scoreFromEvents(await eventsOf(r.id), r.format) });
   res.json({ matches: out });
 });
 
@@ -30,8 +30,9 @@ matches.post('/', requireRole('staff'), async (req, res) => {
   const opponent = String(b.opponent_name ?? '').trim();
   if (!Number.isInteger(b.team_id) || !(await isMember(b.team_id, req.user.id))) return fail(res, 403, 'Choose one of your teams');
   if (!opponent) return fail(res, 400, 'Please enter the opponent\'s name');
-  const row = await db.get(`INSERT INTO matches (team_id, opponent_name, scheduled_at, venue, counts_for_career, created_by)
-    VALUES (?, ?, ?, ?, ?, ?) RETURNING id`, b.team_id, opponent, b.scheduled_at || null, String(b.venue ?? '').trim() || null, b.counts_for_career === false ? 0 : 1, req.user.id);
+  const format = b.format === '3v3' ? '3v3' : '5v5';
+  const row = await db.get(`INSERT INTO matches (team_id, opponent_name, scheduled_at, venue, counts_for_career, created_by, format)
+    VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id`, b.team_id, opponent, b.scheduled_at || null, String(b.venue ?? '').trim() || null, b.counts_for_career === false ? 0 : 1, req.user.id, format);
   res.status(201).json({ match: { id: row.id } });
 });
 
@@ -48,7 +49,7 @@ matches.get('/:id', needMatch, async (req, res) => {
   const m = req.match;
   const roster = await db.all('SELECT p.id, p.name FROM players p WHERE p.id IN (SELECT player_id FROM team_players WHERE team_id = ?) ORDER BY p.name', m.team_id);
   const events = await eventsOf(m.id);
-  const tracked = scoreFromEvents(events);
+  const tracked = scoreFromEvents(events, m.format);
   const mismatch = m.final_home != null && (m.final_home !== tracked.home || m.final_opp !== tracked.opp);
   res.json({ match: m, roster, events, tracked, mismatch });
 });
@@ -58,8 +59,9 @@ matches.post('/:id/start', needMatch, async (req, res) => {
   if (m.status !== 'upcoming') return fail(res, 409, 'This match has already started or ended');
   const starters = req.body?.starters;
   const roster = await activeRoster(m.team_id);
-  const ok = Array.isArray(starters) && starters.length === 5 && new Set(starters).size === 5 && starters.every((id) => roster.includes(id));
-  if (!ok) return fail(res, 400, 'Pick exactly five players from the roster');
+  const n = MATCH_FORMATS[m.format].onCourt;
+  const ok = Array.isArray(starters) && starters.length === n && new Set(starters).size === n && starters.every((id) => roster.includes(id));
+  if (!ok) return fail(res, 400, `Pick exactly ${n} players from the roster`);
   const counts = req.body?.counts_for_career === false ? 0 : m.counts_for_career ? 1 : 0;
   await db.run(`UPDATE matches SET status = 'live', starters = ?, counts_for_career = ?, started_at = ${NOW} WHERE id = ?`, JSON.stringify(starters), counts, m.id);
   res.json({ ok: true });

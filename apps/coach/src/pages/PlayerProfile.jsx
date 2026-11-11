@@ -37,7 +37,8 @@ function Summary({ rows, first }) {
 export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
   const [scope, setScope] = useState('all');
   const [graph, setGraph] = useState(null);
-  const { data: d, error, loading } = useLoad(`/players/${playerId}/profile?scope=${scope}`);
+  const [fmt, setFmt] = useState('all');
+  const { data: d, error, loading } = useLoad(`/players/${playerId}/profile?scope=${scope}&format=${fmt}`);
   if (loading && !d) return <p className="muted">Loading…</p>;
   if (error) return <div className="stack-s"><p className="error">{error}</p>{onBack && <button className="btn btn-sm" onClick={onBack}>Back</button>}</div>;
   const c = d.career;
@@ -59,6 +60,9 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
             <button className={scope === 'all' ? 'on' : ''} onClick={() => setScope('all')}>All matches</button>
             <button className={scope === 'official' ? 'on' : ''} onClick={() => setScope('official')}>Official only</button>
           </div>
+        </div>
+        <div className="seg">
+          {[['all', 'All match types'], ['5v5', '5 on 5'], ['3v3', '3 on 3']].map(([k, l]) => <button key={k} className={fmt === k ? 'on' : ''} onClick={() => setFmt(k)}>{l}</button>)}
         </div>
         <div className="stat-grid">
           <Stat label="Games" value={c.games} />
@@ -94,7 +98,7 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
                   return (
                     <tr key={m.match_id} className={`rowlink${m.counted ? '' : ' dim'}`} onClick={() => onOpenMatch?.(m.match_id)}>
                       <td>{new Date(m.date).toLocaleDateString([], { dateStyle: 'medium' })}</td>
-                      <td>{m.opponent} <span className="badge">{m.kind}</span>{!m.counted && <span className="badge"> not counted</span>}</td>
+                      <td>{m.opponent} <span className="badge">{m.kind}</span>{m.format === '3v3' && <span className="badge">3v3</span>}{!m.counted && <span className="badge"> not counted</span>}</td>
                       <td>{r} {m.result.home}-{m.result.opp}</td><td>{m.min ? fmtClock(m.min) : '–'}</td>
                       <td>{m.stats.PTS}</td><td>{m.stats.REB}</td><td>{m.stats.AST}</td><td>{m.stats.STEAL}</td><td>{m.stats.BLOCK}</td><td>{m.stats.PF}</td>
                     </tr>

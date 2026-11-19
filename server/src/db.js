@@ -138,6 +138,52 @@ const MIGRATIONS = [
      PRIMARY KEY (user_id, player_id)
    )`,
   `ALTER TABLE matches ADD COLUMN format TEXT NOT NULL DEFAULT '5v5' CHECK (format IN ('5v5', '3v3'))`,
+  `CREATE TABLE drills (
+     id SERIAL PRIMARY KEY,
+     name TEXT NOT NULL,
+     section TEXT NOT NULL CHECK (section IN ('physical', 'skill')),
+     unit TEXT NOT NULL,
+     direction TEXT NOT NULL CHECK (direction IN ('higher', 'lower')),
+     axis TEXT,
+     description TEXT,
+     is_starter INTEGER NOT NULL DEFAULT 0,
+     created_by INTEGER REFERENCES users(id),
+     created_at TEXT NOT NULL DEFAULT (${NOW})
+   );
+   CREATE TABLE drill_thresholds (
+     drill_id INTEGER NOT NULL REFERENCES drills(id) ON DELETE CASCADE,
+     team_id INTEGER NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+     baseline DOUBLE PRECISION NOT NULL,
+     target DOUBLE PRECISION NOT NULL,
+     PRIMARY KEY (drill_id, team_id)
+   );
+   CREATE TABLE drill_results (
+     id SERIAL PRIMARY KEY,
+     drill_id INTEGER NOT NULL REFERENCES drills(id) ON DELETE CASCADE,
+     player_id INTEGER NOT NULL REFERENCES players(id),
+     team_id INTEGER NOT NULL REFERENCES teams(id),
+     value DOUBLE PRECISION NOT NULL,
+     baseline DOUBLE PRECISION NOT NULL,
+     target DOUBLE PRECISION NOT NULL,
+     tag TEXT,
+     recorded_on TEXT NOT NULL,
+     recorded_by INTEGER NOT NULL REFERENCES users(id),
+     created_at TEXT NOT NULL DEFAULT (${NOW})
+   );
+   CREATE INDEX idx_results_player ON drill_results (player_id, drill_id, recorded_on);
+   INSERT INTO drills (name, section, unit, direction, axis, is_starter, description) VALUES
+     ('20 m sprint', 'physical', 'seconds', 'lower', 'speed', 1, 'Time over 20 metres from a standing start'),
+     ('Lane agility', 'physical', 'seconds', 'lower', 'agility', 1, 'Time for the lane agility course'),
+     ('Beep test', 'physical', 'level', 'higher', 'endurance', 1, 'Level reached in the beep test'),
+     ('Vertical jump', 'physical', 'cm', 'higher', 'power', 1, 'Standing vertical jump height'),
+     ('Push-ups in 60 seconds', 'physical', 'reps', 'higher', 'strength', 1, 'Full push-ups in one minute'),
+     ('Sit and reach', 'physical', 'cm', 'higher', 'flexibility', 1, 'Distance reached in the sit and reach'),
+     ('10 free throws', 'skill', 'makes', 'higher', 'shooting', 1, 'Makes out of 10'),
+     ('Lay-ups, 10 each side', 'skill', 'makes', 'higher', 'finishing', 1, 'Makes out of 20'),
+     ('Dribble course', 'skill', 'seconds', 'lower', 'handling', 1, 'Time to complete the dribble course'),
+     ('10 target passes', 'skill', 'makes', 'higher', 'passing', 1, 'Passes on target out of 10'),
+     ('Defensive slide drill', 'skill', 'seconds', 'lower', 'defence', 1, 'Time for the defensive slide drill'),
+     ('Game sense rating', 'skill', 'rating', 'higher', 'awareness', 1, 'Trainer rating from 1 to 5')`,
 ];
 
 await script('CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY)');

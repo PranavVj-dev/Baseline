@@ -16,3 +16,4 @@ export { AuthProvider, useAuth } from './auth.jsx';
 export { default as AuthScreen } from './AuthScreen.jsx';
 export { default as AppShell } from './AppShell.jsx';
 export { useLoad } from './useLoad.js';
+export { default as Hexagon } from './Hexagon.jsx';

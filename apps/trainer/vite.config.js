@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// /api calls are forwarded to the Baseline server, so phones on your Wi-Fi only need this one address.
-export default defineConfig({
+// Built, the Trainer app lives at /trainer/ on the same server as the Coach app. In development it stays at the root.
+export default defineConfig(({ command }) => ({
+  base: command === 'build' ? '/trainer/' : '/',
   plugins: [react()],
   resolve: { dedupe: ['react', 'react-dom'] },
   server: { port: 5174, strictPort: true, host: true, proxy: { '/api': 'http://localhost:3001' } },
-});
+}));

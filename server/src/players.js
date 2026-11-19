@@ -128,3 +128,5 @@ players.get('/:pid/profile', async (req, res) => {
     matches: list,
   });
 });
+
+export { staffOf, linked };

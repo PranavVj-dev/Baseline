@@ -9,6 +9,7 @@ import PublicMatches from './pages/PublicMatches.jsx';
 import PublicMatch from './pages/PublicMatch.jsx';
 import PlayerProfile from './pages/PlayerProfile.jsx';
 import MyProfile from './pages/MyProfile.jsx';
+import Tournaments from './pages/Tournaments.jsx';
 import MatchEntry from './match/MatchEntry.jsx';
 
 // The same app serves both account types; the menu depends on the role chosen at sign-up.
@@ -17,9 +18,11 @@ const NAV = {
     { key: 'home', label: 'Home', hint: 'Where you start' },
     { key: 'teams', label: 'Teams', hint: 'Players, profiles and stats' },
     { key: 'matches', label: 'Matches', hint: 'Set up and record a match' },
+    { key: 'tournaments', label: 'Tournaments', hint: 'Coming soon' },
   ],
   viewer: [
     { key: 'matches', label: 'Matches', hint: 'Live scores and results' },
+    { key: 'tournaments', label: 'Tournaments', hint: 'Coming soon' },
     { key: 'following', label: 'Following', hint: 'Teams you follow' },
     { key: 'profile', label: 'My profile', hint: 'Your player\u2019s stats' },
   ],
@@ -29,6 +32,8 @@ const GUIDE = {
     { title: 'Teams', text: 'Your teams and players. Open a team, then tap Profile next to a player to see career stats, graphs and match history. Tap Access to give a parent a code to link their child.' },
     { title: 'Matches', text: 'Set up a match, pick the starting five, then Start match to record it live. Finished matches show the box score.' },
     { title: 'Recording a match', text: 'Tap a player, then the action. Use Undo if you slip. After a basket, tap who assisted. Use Add assist later if you missed it.' },
+    { title: 'Tournaments', text: 'Work in progress. Tournaments, fixtures and standings are coming.' },
+    { title: 'Training', text: 'Drills and results are recorded in the Baseline Trainer app (same address, add /trainer). The charts show on each player\u2019s profile here.' },
     { title: 'Help', text: 'Tap Help at the top any time to see this again.' },
   ],
   viewer: [
@@ -102,6 +107,7 @@ export default function App() {
   else if (teamId) body = <TeamDetail key={teamId} teamId={teamId} onBack={() => setTeamId(null)} onOpenPlayer={setPlayerId} />;
   else if (current === 'teams') body = <Teams onOpen={setTeamId} />;
   else if (current === 'matches') body = staff ? <Matches onOpen={setMatchId} /> : <PublicMatches onOpen={setPubId} canFollow />;
+  else if (current === 'tournaments') body = <Tournaments />;
   else if (current === 'following') body = <Following onOpen={setTeamId} />;
   else if (current === 'profile') body = <MyProfile claimCode={claimCode} onClaimed={() => setClaimCode('')} onOpenMatch={setPubId} />;
   else body = <div className="card"><p>Signed in as <strong>{user.name}</strong> ({user.email}).</p><p className="muted">Use Teams to manage your players and Matches to set up and record a game.</p></div>;

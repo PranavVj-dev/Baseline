@@ -16,7 +16,7 @@
     "coach": "npm run dev -w apps/coach",
     "trainer": "npm run dev -w apps/trainer",
     "seed": "npm run seed -w server",
-    "build": "npm run build -w apps/coach",
+    "build": "npm run build -w apps/coach && npm run build -w apps/trainer",
     "start": "npm run start -w server"
   },
   "devDependencies": {

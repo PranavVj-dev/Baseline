@@ -8,6 +8,7 @@ import { teams } from './teams.js';
 import { matches } from './matches.js';
 import { publicApi } from './public.js';
 import { players } from './players.js';
+import { training } from './training.js';
 import { hashPassword, checkPassword, sign, requireAuth } from './auth.js';
 import { seedDemo } from './seed.js';
 
@@ -48,12 +49,21 @@ app.use('/api/teams', teams);
 app.use('/api/matches', matches);
 app.use('/api/public', publicApi);
 app.use('/api/players', players);
+app.use('/api/training', training);
 app.use('/api', (_req, res) => fail(res, 404, 'Not found'));
 
-// In production the server also serves the built Coach app, so one address does everything.
-const dist = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'apps', 'coach', 'dist');
+// In production the server also serves the built apps, so one address does everything:
+// the Coach app at / and the Trainer app at /trainer/.
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'apps');
+const dist = path.join(root, 'coach', 'dist');
+const trainerDist = path.join(root, 'trainer', 'dist');
+const noCache = (res, file) => { if (file.endsWith('sw.js') || file.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache'); };
+if (existsSync(trainerDist)) {
+  app.use('/trainer', express.static(trainerDist, { setHeaders: noCache }));
+  app.get(/^\/trainer(\/.*)?$/, (_req, res) => res.sendFile(path.join(trainerDist, 'index.html')));
+}
 if (existsSync(dist)) {
-  app.use(express.static(dist, { setHeaders: (res, file) => { if (file.endsWith('sw.js') || file.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache'); } }));
+  app.use(express.static(dist, { setHeaders: noCache }));
   app.get(/^\/(?!api\/).*/, (_req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
 

@@ -119,3 +119,10 @@ tr.rowlink:hover { background: #f1f5f9; }
 .guide span { color: var(--muted); font-size: .92rem; }
 .stat.tile { cursor: pointer; font: inherit; min-height: 0; box-shadow: 0 3px 0 var(--line); }
 .stat.tile i { font-style: normal; font-size: .65rem; color: var(--focus); }
+
+.hex { margin: 0; display: grid; gap: 4px; }
+.hex figcaption { font-weight: 700; }
+.hex svg { width: 100%; max-width: 400px; height: auto; }
+.hexnote { margin: 0; font-size: .8rem; }
+.pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.wip { border: 2px dashed var(--line); background: #fbfcfd; }

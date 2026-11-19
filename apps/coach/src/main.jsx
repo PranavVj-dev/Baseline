@@ -3,7 +3,7 @@ import { AuthProvider } from '@baseline/ui';
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(
-  <AuthProvider tokenKey="baseline-coach-token">
+  <AuthProvider tokenKey="baseline-token">
     <App />
   </AuthProvider>
 );

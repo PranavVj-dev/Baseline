@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLoad } from '@baseline/ui';
 
 // Reads the same roster the Coach app edits, so new, renamed and removed players show up here by themselves.
-function Roster({ teamId }) {
+function Roster({ teamId, onOpen }) {
   const { data, error, loading, reload } = useLoad(`/teams/${teamId}`);
   useEffect(() => {
     const again = () => { if (document.visibilityState === 'visible') reload(); };
@@ -14,17 +14,21 @@ function Roster({ teamId }) {
   if (!data) return loading ? <p className="muted">Loading…</p> : <p className="error">{error}</p>;
   return (
     <section className="stack-s">
-      <p className="muted">{data.roster.length} players. This list updates by itself when the coach changes the roster.</p>
+      <p className="muted">{data.roster.length} players. This list updates by itself when the coach changes the roster. Tap a player to see their charts and results.</p>
       <ul className="list">
         {data.roster.map((p) => (
-          <li key={p.id}><span className="jersey">{p.jersey_no ?? '–'}</span><span className="grow">{p.name}</span></li>
+          <li key={p.id}>
+            <span className="jersey">{p.jersey_no ?? '–'}</span>
+            <span className="grow">{p.name}</span>
+            <button className="btn-sm" onClick={() => onOpen(p.id)}>Charts</button>
+          </li>
         ))}
       </ul>
     </section>
   );
 }
 
-export default function Players() {
+export default function Players({ onOpen }) {
   const { data, error, loading } = useLoad('/teams/mine');
   const [teamId, setTeamId] = useState(null);
   if (loading) return <p className="muted">Loading…</p>;
@@ -38,7 +42,7 @@ export default function Players() {
           {data.teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </label>
-      <Roster key={current} teamId={current} />
+      <Roster key={current} teamId={current} onOpen={onOpen} />
     </div>
   );
 }

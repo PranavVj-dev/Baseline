@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLoad } from '@baseline/ui';
 import { fmtClock } from '@baseline/shared';
 import StatChart from './StatChart.jsx';
+import TrainingSection from './TrainingSection.jsx';
 
 const v = (x, suffix = '') => (x == null ? '–' : `${x}${suffix}`);
 const Stat = ({ label, value, onClick }) => (onClick
@@ -82,6 +83,7 @@ export default function PlayerProfile({ playerId, onBack, onOpenMatch }) {
         </p>
       </section>
 
+      <TrainingSection playerId={playerId} />
       {graph && <StatChart metric={METRICS[graph]} matches={series} onClose={() => setGraph(null)} />}
       <section className="stack-s"><h3>By academic year</h3><Summary rows={d.by_year} first="Year" /></section>
       <section className="stack-s"><h3>By team</h3><Summary rows={d.by_team} first="Team" /></section>

@@ -6,7 +6,7 @@ Basketball match and development data system (FLAME University capstone). One se
 |---|---|---|
 | Server and database | `server/` | http://localhost:3001 |
 | Coach app | `apps/coach/` | http://localhost:5173 |
-| Trainer app | `apps/trainer/` | http://localhost:5174 |
+| Trainer app | `apps/trainer/` | http://localhost:5174 (online: your address plus `/trainer/`) |
 | Shared logic and API client | `packages/shared/` | |
 | Shared design kit | `packages/ui/` | |
 
@@ -46,5 +46,5 @@ See `DEPLOY.md`. The server also serves the built Coach app, so one address does
 4. Public match pages, claim codes, player profiles (done)
 5. v2.0: quarter lineup, running clock, minutes and subs screen (done)
 6. Beta: hosted Postgres, install to phone, menu hints and first-use guide, stat graphs, stronger assist prompt (done)
-7. Trainer app: drills, attendance, hexagons, groups (not built)
+7. Trainer app: drills, results, hexagon charts (done); attendance, schedule, groups (not built)
 8. Tournaments, photos, push notifications (not built)

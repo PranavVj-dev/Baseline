@@ -47,3 +47,6 @@ This needs the live address first, and it is the same app inside a wrapper, so t
 - **The page says it cannot reach the server:** wait a minute and reload (the service was asleep).
 - **Build failed on Render:** open the build log and send me the last 20 lines.
 - **You can sign in but data is missing:** check the service is using the Render database (the `DATABASE_URL` setting is filled in).
+
+## The Trainer app
+It is part of the same service, so there is nothing extra to create on Render. After you deploy, open your address with `/trainer/` on the end, for example `https://baseline-xxxx.onrender.com/trainer/`. Install it from the browser menu like the Coach app; it gets its own green icon. You sign in once for both apps. Players and parents never need it, because their training charts appear on the profile in the Coach app.
